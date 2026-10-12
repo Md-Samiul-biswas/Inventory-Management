@@ -123,24 +123,24 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
       </div>
 
       {/* 3 Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Total Orders</div>
-          <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Total Orders</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
             {orders.length} <span className="text-xs font-normal text-neutral-500">orders</span>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Total Costs</div>
-          <div className="text-2xl font-bold font-mono text-neutral-800 mt-1">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Total Costs</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
             {formatCurrency(totalCost)}
           </div>
         </div>
 
-        <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 shadow-2xs">
-          <div className="text-xs text-emerald-800 font-bold uppercase tracking-wider">Total Net Profit</div>
-          <div className="text-2xl font-extrabold font-mono text-emerald-900 mt-1">
+        <div className="bg-emerald-50/70 p-3.5 sm:p-4 rounded-xl border border-emerald-200 shadow-2xs col-span-2 sm:col-span-1">
+          <div className="text-[10px] sm:text-xs text-emerald-800 font-bold uppercase tracking-wider truncate">Total Net Profit</div>
+          <div className="text-lg sm:text-2xl font-extrabold font-mono text-emerald-900 mt-1 truncate">
             {formatCurrency(totalProfit)}
           </div>
         </div>

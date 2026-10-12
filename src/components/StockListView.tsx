@@ -65,23 +65,23 @@ export const StockListView: React.FC<StockListViewProps> = ({
       </div>
 
       {/* 3 Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Total Stock</div>
-          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Total Stock</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-emerald-700 mt-1 truncate">
             {totalUnits} <span className="text-xs font-normal text-neutral-500">pcs</span>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Stock Value</div>
-          <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Stock Value</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
             {formatCurrency(totalValuation)}
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Stock Alerts</div>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs col-span-2 sm:col-span-1">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Stock Alerts</div>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-base font-bold font-mono text-amber-700">
               {lowCount} Low

@@ -54,25 +54,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'orders' as TabType,
       label: 'Order Management',
       icon: ShoppingBag,
-      badge: `${orderCount}`,
     },
     {
       id: 'package' as TabType,
       label: 'Package',
       icon: Package,
-      badge: `${packageCount}`,
     },
     {
       id: 'stock-list' as TabType,
       label: 'Stock List',
       icon: Boxes,
-      badge: `${totalStockUnits}`,
     },
     {
       id: 'product-list' as TabType,
       label: 'Product List',
       icon: Layers,
-      badge: `${productCount}`,
     },
     {
       id: 'expenses' as TabType,
@@ -145,18 +141,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
                 <span className="truncate">{item.label}</span>
               </div>
-
-              {item.badge && (
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ml-1.5 ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-neutral-100 text-neutral-600'
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
             </button>
           );
         })}

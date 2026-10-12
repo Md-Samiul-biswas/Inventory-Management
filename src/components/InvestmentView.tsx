@@ -67,60 +67,60 @@ export const InvestmentView: React.FC<InvestmentViewProps> = ({
       </div>
 
       {/* 4 Primary Investment Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Stock Capital */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider flex items-center justify-between">
-            <span>Inventory Capital</span>
-            <Boxes className="w-4 h-4 text-purple-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider flex items-center justify-between">
+            <span className="truncate">Inventory Capital</span>
+            <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
             {formatCurrency(stockCapital)}
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Capital currently in physical stock
+          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
+            Physical stock capital
           </div>
         </div>
 
         {/* Total Capital Deployed */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider flex items-center justify-between">
-            <span>Total Capital</span>
-            <PiggyBank className="w-4 h-4 text-blue-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider flex items-center justify-between">
+            <span className="truncate">Total Capital</span>
+            <PiggyBank className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
             {formatCurrency(totalCapitalInvested)}
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Stock + Order costs + Overheads
+          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
+            Stock + Costs + Overheads
           </div>
         </div>
 
         {/* Realized Sales Revenue */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider flex items-center justify-between">
-            <span>Sales Returns</span>
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider flex items-center justify-between">
+            <span className="truncate">Sales Returns</span>
+            <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-emerald-700 mt-1 truncate">
             {formatCurrency(totalSalesRevenue)}
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Recovered from {orders.length} orders
+          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
+            From {orders.length} orders
           </div>
         </div>
 
         {/* ROI % */}
-        <div className="bg-emerald-50/80 p-4 rounded-xl border border-emerald-300 shadow-2xs">
-          <div className="text-xs text-emerald-800 font-bold uppercase tracking-wider flex items-center justify-between">
-            <span>Net Profit (ROI)</span>
-            <TrendingUp className="w-4 h-4 text-emerald-700" />
+        <div className="bg-emerald-50/80 p-3.5 sm:p-4 rounded-xl border border-emerald-300 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-emerald-800 font-bold uppercase tracking-wider flex items-center justify-between">
+            <span className="truncate">Net Profit (ROI)</span>
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-900 mt-1">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-emerald-900 mt-1 truncate">
             {formatCurrency(netProfitRealized)}
           </div>
-          <div className="text-[11px] text-emerald-700 font-semibold mt-1">
-            Return on Capital: {formatPercent(roiPercent)}
+          <div className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold mt-1 truncate">
+            ROI: {formatPercent(roiPercent)}
           </div>
         </div>
       </div>

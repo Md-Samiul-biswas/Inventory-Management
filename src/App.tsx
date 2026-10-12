@@ -247,19 +247,22 @@ export default function App() {
       )}
 
       {/* Mobile Top Header */}
-      <div className="md:hidden bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between no-print sticky top-0 z-30">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
-            <PackageCheck className="w-4 h-4 text-white" />
+      <div className="md:hidden bg-white border-b border-neutral-200 px-3.5 py-2.5 flex items-center justify-between no-print sticky top-0 z-30">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-1.5 -ml-1 text-neutral-700 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 cursor-pointer transition-colors"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5 text-neutral-800" /> : <Menu className="w-5 h-5 text-neutral-800" />}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
+              <PackageCheck className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-sm text-neutral-900 truncate">{settings.shopName}</span>
           </div>
-          <span className="font-bold text-sm text-neutral-900">{settings.shopName}</span>
         </div>
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-1.5 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 cursor-pointer"
-        >
-          {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
       </div>
 
       {/* Desktop Left Sidebar with requested menus */}

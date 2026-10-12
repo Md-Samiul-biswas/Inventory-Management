@@ -92,19 +92,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>
         </div>
-
-        <button
-          type="button"
-          onClick={() => onNavigateToTab('new-order')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Order</span>
-        </button>
       </div>
 
       {/* Stock Alert if any */}
@@ -130,61 +121,61 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
-      {/* 4 Primary Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4 Primary Metric Cards - 2 per row on mobile as requested */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Net Profit */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider mb-2">
-            <span>Net Profit</span>
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="flex items-center justify-between text-neutral-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1.5 sm:mb-2">
+            <span className="truncate">Net Profit</span>
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-700">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-emerald-700 truncate">
             {formatCurrency(totalNetProfit)}
           </div>
-          <div className="text-[11px] text-neutral-500 mt-1">
+          <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 truncate">
             Margin: <span className="font-bold font-mono text-emerald-600">{formatPercent(avgMargin)}</span>
           </div>
         </div>
 
         {/* Total Sales */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider mb-2">
-            <span>Total Sales</span>
-            <ShoppingBag className="w-4 h-4 text-blue-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="flex items-center justify-between text-neutral-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1.5 sm:mb-2">
+            <span className="truncate">Total Sales</span>
+            <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-neutral-900">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 truncate">
             {formatCurrency(totalRevenue)}
           </div>
-          <div className="text-[11px] text-neutral-500 mt-1">
+          <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 truncate">
             From <span className="font-bold font-mono">{totalOrders}</span> orders
           </div>
         </div>
 
         {/* Total Costs */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider mb-2">
-            <span>Total Costs</span>
-            <Coins className="w-4 h-4 text-amber-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="flex items-center justify-between text-neutral-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1.5 sm:mb-2">
+            <span className="truncate">Total Costs</span>
+            <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-neutral-800">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 truncate">
             {formatCurrency(totalOrderCosts)}
           </div>
-          <div className="text-[11px] text-neutral-500 mt-1 truncate">
-            Products + Delivery + Packaging
+          <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 truncate">
+            Prod + Deliv + Pack
           </div>
         </div>
 
         {/* Stock Value */}
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider mb-2">
-            <span>Stock Value</span>
-            <Boxes className="w-4 h-4 text-purple-600" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="flex items-center justify-between text-neutral-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1.5 sm:mb-2">
+            <span className="truncate">Stock Value</span>
+            <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-neutral-900">
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 truncate">
             {formatCurrency(stockValuation)}
           </div>
-          <div className="text-[11px] text-neutral-500 mt-1">
-            <span className="font-bold font-mono text-emerald-700">{totalStockUnits}</span> items in inventory
+          <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 truncate">
+            <span className="font-bold font-mono text-emerald-700">{totalStockUnits}</span> items in stock
           </div>
         </div>
       </div>

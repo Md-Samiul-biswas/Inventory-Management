@@ -93,34 +93,34 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       </div>
 
       {/* 3 Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Grand Total Expenses</div>
-          <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Grand Total Expenses</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
             {formatCurrency(grandTotalExpenses)}
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Orders + Custom logged expenses
+          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
+            Orders + Custom expenses
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Order Direct Expenses</div>
-          <div className="text-2xl font-bold font-mono text-neutral-800 mt-1">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Order Direct Expenses</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
             {formatCurrency(totalOrderExpenses)}
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Products + Delivery + Packaging
+          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
+            Prod + Deliv + Packaging
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Other Business Expenses</div>
-          <div className="text-2xl font-bold font-mono text-neutral-800 mt-1">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs col-span-2 sm:col-span-1">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Other Business Expenses</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
             {formatCurrency(totalCustomExpenses)}
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Marketing, shop materials & other
+          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
+            Marketing & other
           </div>
         </div>
       </div>
