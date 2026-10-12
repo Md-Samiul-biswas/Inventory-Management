@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Plus,
   Eye,
+  StickyNote,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -92,10 +93,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Top Banner */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Dashboard</h1>
         </div>
+        <button
+          onClick={() => onNavigateToTab('keep-notes')}
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
+        >
+          <StickyNote className="w-4 h-4 text-amber-600" />
+          <span>Keep Notes & Tasks খুলুন</span>
+        </button>
       </div>
 
       {/* Stock Alert if any */}

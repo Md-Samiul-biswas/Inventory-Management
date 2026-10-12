@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { ProductItem, Order, OrderStatus, AppSettings, ExpenseItem, SavedPackage } from './types';
+import { ProductItem, Order, OrderStatus, AppSettings, ExpenseItem, SavedPackage, KeepNote } from './types';
 import {
   loadProducts,
   saveProducts,
@@ -16,6 +16,8 @@ import {
   saveExpenses,
   loadPackages,
   savePackages,
+  loadNotes,
+  saveNotes,
   loadSettings,
   saveSettings,
   resetAllData,
@@ -29,15 +31,22 @@ import { ProductListView } from './components/ProductListView';
 import { ExpensesView } from './components/ExpensesView';
 import { InvestmentView } from './components/InvestmentView';
 import { OrderFormView } from './components/OrderFormView';
+import { KeepNotesView } from './components/KeepNotesView';
 import { OrderInvoiceModal } from './components/OrderInvoiceModal';
 import { SettingsModal } from './components/SettingsModal';
+import { initAuth, testConnection } from './lib/firebase';
+import { User } from 'firebase/auth';
 
 export default function App() {
   const [products, setProducts] = useState<ProductItem[]>(loadProducts);
   const [orders, setOrders] = useState<Order[]>(loadOrders);
   const [expenses, setExpenses] = useState<ExpenseItem[]>(loadExpenses);
   const [packages, setPackages] = useState<SavedPackage[]>(loadPackages);
+  const [notes, setNotes] = useState<KeepNote[]>(loadNotes);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
@@ -45,6 +54,22 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Initialize Auth & test connection
+  useEffect(() => {
+    testConnection();
+    const unsubscribe = initAuth(
+      (currentUser, token) => {
+        setUser(currentUser);
+        if (token) setAccessToken(token);
+      },
+      () => {
+        setUser(null);
+        setAccessToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Sync to storage
   useEffect(() => {
@@ -62,6 +87,10 @@ export default function App() {
   useEffect(() => {
     savePackages(packages);
   }, [packages]);
+
+  useEffect(() => {
+    saveNotes(notes);
+  }, [notes]);
 
   useEffect(() => {
     saveSettings(settings);
@@ -197,6 +226,21 @@ export default function App() {
     showToast(`Package "${pkg.name}" loaded for new order!`, 'success');
   };
 
+  // Keep Notes Actions
+  const handleSaveNote = (newNote: KeepNote) => {
+    setNotes((prev) => [newNote, ...prev]);
+    showToast(`নোট "${newNote.title}" সংরক্ষিত হয়েছে!`, 'success');
+  };
+
+  const handleUpdateNote = (updatedNote: KeepNote) => {
+    setNotes((prev) => prev.map((n) => (n.id === updatedNote.id ? updatedNote : n)));
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    showToast('নোট মুছে ফেলা হয়েছে', 'info');
+  };
+
   // Reset Data
   const handleResetData = () => {
     const res = resetAllData();
@@ -274,6 +318,7 @@ export default function App() {
           totalStockUnits={totalStockUnits}
           orderCount={orders.length}
           packageCount={packages.length}
+          notesCount={notes.length}
           onOpenSettings={() => setIsSettingsOpen(true)}
           shopName={settings.shopName}
         />
@@ -293,6 +338,7 @@ export default function App() {
               totalStockUnits={totalStockUnits}
               orderCount={orders.length}
               packageCount={packages.length}
+              notesCount={notes.length}
               onOpenSettings={() => {
                 setIsSettingsOpen(true);
                 setIsMobileMenuOpen(false);
@@ -367,6 +413,25 @@ export default function App() {
             products={products}
             orders={orders}
             expenses={expenses}
+          />
+        )}
+
+        {currentTab === 'keep-notes' && (
+          <KeepNotesView
+            notes={notes}
+            onSaveNote={handleSaveNote}
+            onDeleteNote={handleDeleteNote}
+            onUpdateNote={handleUpdateNote}
+            user={user}
+            accessToken={accessToken}
+            onLoginSuccess={(u, token) => {
+              setUser(u);
+              setAccessToken(token);
+            }}
+            onLogoutSuccess={() => {
+              setUser(null);
+              setAccessToken(null);
+            }}
           />
         )}
 

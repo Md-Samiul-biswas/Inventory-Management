@@ -102,3 +102,23 @@ export interface SavedPackage {
   defaultPackagingCharge?: number | '';
   createdAt: string;
 }
+
+export interface KeepChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface KeepNote {
+  id: string;
+  title: string;
+  content: string;
+  type: 'note' | 'checklist';
+  items?: KeepChecklistItem[];
+  color: 'default' | 'amber' | 'emerald' | 'blue' | 'purple' | 'rose' | 'orange';
+  isPinned: boolean;
+  category?: 'general' | 'inventory' | 'orders' | 'supplier';
+  googleTaskId?: string;
+  createdAt: string;
+  updatedAt: string;
+}

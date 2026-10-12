@@ -1,4 +1,4 @@
-import { ProductItem, Order, AppSettings, ExpenseItem, SavedPackage } from '../types';
+import { ProductItem, Order, AppSettings, ExpenseItem, SavedPackage, KeepNote } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_SETTINGS, INITIAL_EXPENSES, INITIAL_PACKAGES } from '../data/initialData';
 
 const PRODUCTS_KEY = 'packagecraft_products_v2';
@@ -6,6 +6,60 @@ const ORDERS_KEY = 'packagecraft_orders_v2';
 const SETTINGS_KEY = 'packagecraft_settings_v2';
 const EXPENSES_KEY = 'packagecraft_expenses_v2';
 const PACKAGES_KEY = 'packagecraft_packages_v2';
+const NOTES_KEY = 'packagecraft_notes_v2';
+
+export const INITIAL_NOTES: KeepNote[] = [
+  {
+    id: 'note-1',
+    title: 'প্যাকেজিং ও ডেলিভারি চেকলিস্ট',
+    content: '',
+    type: 'checklist',
+    items: [
+      { id: 'item-1', text: 'কাস্টম বাবল র‍্যাপ ও টেপ স্টক চেক', completed: true },
+      { id: 'item-2', text: 'প্রিন্ট করা ইনভয়েস ভেরিফিকেশন', completed: true },
+      { id: 'item-3', text: 'ডেলিভারি কুরিয়ার পিকআপ কনফার্মেশন', completed: false },
+      { id: 'item-4', text: 'কাস্টমারকে ট্র্যাকিং আইডি এসএমএস পাঠানো', completed: false }
+    ],
+    color: 'amber',
+    isPinned: true,
+    category: 'orders',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'note-2',
+    title: 'সাপ্লায়ার অর্ডার রিমাইন্ডার (Keep নোট)',
+    content: 'পরবর্তী সপ্তাহের জন্য সুতা এবং প্রিমিয়াম গিফট বক্স পাইকারি মার্কেট থেকে রিস্টক করতে হবে। ন্যূনতম ২০০ পিস এর ডিসকাউন্ট রেট যাচাই করুন।',
+    type: 'note',
+    color: 'emerald',
+    isPinned: false,
+    category: 'supplier',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+export function loadNotes(): KeepNote[] {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY);
+    if (!raw) {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(INITIAL_NOTES));
+      return INITIAL_NOTES;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    return INITIAL_NOTES;
+  }
+}
+
+export function saveNotes(notes: KeepNote[]): void {
+  try {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 
 export function loadProducts(): ProductItem[] {
   try {

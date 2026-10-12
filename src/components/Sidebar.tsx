@@ -11,6 +11,7 @@ import {
   Settings,
   PackageCheck,
   ChevronRight,
+  StickyNote,
 } from 'lucide-react';
 
 export type TabType =
@@ -21,6 +22,7 @@ export type TabType =
   | 'product-list'
   | 'expenses'
   | 'investment'
+  | 'keep-notes'
   | 'new-order';
 
 interface SidebarProps {
@@ -30,6 +32,7 @@ interface SidebarProps {
   totalStockUnits: number;
   orderCount: number;
   packageCount?: number;
+  notesCount?: number;
   onOpenSettings: () => void;
   shopName: string;
 }
@@ -41,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   totalStockUnits,
   orderCount,
   packageCount = 0,
+  notesCount = 0,
   onOpenSettings,
   shopName,
 }) => {
@@ -79,6 +83,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'investment' as TabType,
       label: 'Investment',
       icon: TrendingUp,
+    },
+    {
+      id: 'keep-notes' as TabType,
+      label: 'Keep Notes & Tasks',
+      icon: StickyNote,
+      badge: notesCount > 0 ? notesCount : undefined,
     },
   ];
 
@@ -141,6 +151,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
                 <span className="truncate">{item.label}</span>
               </div>
+              {item.badge !== undefined && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  isActive ? 'bg-amber-400 text-neutral-900' : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}

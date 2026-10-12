@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Inventory product item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "costPrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "minStockAlert": { "type": "number" },
+        "unit": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "costPrice", "sellingPrice", "stock", "userId"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "discount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["orderNumber", "customerName", "totalAmount", "userId"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business expense entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["title", "amount", "userId"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Custom product package bundle",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "packagePrice": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "packagePrice", "userId"]
+    },
+    "KeepNote": {
+      "title": "KeepNote",
+      "description": "Keep-style note or task checklist for inventory and orders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "color": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "googleTaskId": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["title", "userId"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products collection"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Orders collection"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expenses collection"
+    },
+    "/packages/{packageId}": {
+      "schema": "Package",
+      "description": "Saved packages collection"
+    },
+    "/notes/{noteId}": {
+      "schema": "KeepNote",
+      "description": "User notes and Keep-style checklists collection"
+    }
+  }
+}
