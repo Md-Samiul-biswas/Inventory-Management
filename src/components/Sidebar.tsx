@@ -13,6 +13,7 @@ import {
   ChevronRight,
   StickyNote,
   Truck,
+  FileText,
 } from 'lucide-react';
 
 export type TabType =
@@ -23,6 +24,7 @@ export type TabType =
   | 'stock-list'
   | 'product-list'
   | 'expenses'
+  | 'reports'
   | 'investment'
   | 'keep-notes'
   | 'new-order';
@@ -56,47 +58,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'dashboard' as TabType,
       label: 'Dashboard',
+      sublabel: 'ড্যাশবোর্ড',
       icon: LayoutDashboard,
     },
     {
       id: 'orders' as TabType,
-      label: 'Order Management',
+      label: 'Orders & Sales',
+      sublabel: 'অর্ডার ও সেলস',
       icon: ShoppingBag,
+      badge: orderCount > 0 ? orderCount : undefined,
+    },
+    {
+      id: 'product-list' as TabType,
+      label: 'Inventory & Stock',
+      sublabel: 'ইনভেন্টরি ও স্টক',
+      icon: Layers,
+      badge: productCount > 0 ? productCount : undefined,
+    },
+    {
+      id: 'expenses' as TabType,
+      label: 'Expenses',
+      sublabel: 'রানিং খরচ',
+      icon: Receipt,
+    },
+    {
+      id: 'reports' as TabType,
+      label: 'Reports & P&L',
+      sublabel: 'মাসিক প্রফিট রিপোর্ট',
+      icon: FileText,
     },
     {
       id: 'courier' as TabType,
-      label: 'Courier',
+      label: 'Courier (Pathao)',
+      sublabel: 'কুরিয়ার পার্টনার',
       icon: Truck,
       badge: courierActiveCount > 0 ? courierActiveCount : undefined,
     },
     {
       id: 'package' as TabType,
-      label: 'Package',
+      label: 'Package Sets',
+      sublabel: 'প্যাকেজিং বক্স ও সেট',
       icon: Package,
-    },
-    {
-      id: 'stock-list' as TabType,
-      label: 'Stock List',
-      icon: Boxes,
-    },
-    {
-      id: 'product-list' as TabType,
-      label: 'Product List',
-      icon: Layers,
-    },
-    {
-      id: 'expenses' as TabType,
-      label: 'Expenses',
-      icon: Receipt,
     },
     {
       id: 'investment' as TabType,
       label: 'Investment',
+      sublabel: 'ইনভেস্টমেন্ট ও মূলধন',
       icon: TrendingUp,
     },
     {
       id: 'keep-notes' as TabType,
       label: 'Keep Notes & Tasks',
+      sublabel: 'নোটস ও টাস্ক',
       icon: StickyNote,
       badge: notesCount > 0 ? notesCount : undefined,
     },
@@ -153,13 +166,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
                   className={`w-4 h-4 shrink-0 ${
                     isActive ? 'text-white' : 'text-neutral-400'
                   }`}
                 />
-                <span className="truncate">{item.label}</span>
+                <div className="min-w-0">
+                  <div className="truncate leading-tight">{item.label}</div>
+                  {item.sublabel && (
+                    <div className={`text-[10px] leading-tight mt-0.5 truncate font-normal ${
+                      isActive ? 'text-neutral-300' : 'text-neutral-400'
+                    }`}>
+                      {item.sublabel}
+                    </div>
+                  )}
+                </div>
               </div>
               {item.badge !== undefined && (
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${

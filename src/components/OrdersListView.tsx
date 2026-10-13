@@ -48,9 +48,15 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
   }, [orders, search, statusFilter]);
 
   // Totals
-  const totalRev = useMemo(() => orders.reduce((s, o) => s + o.sellingPrice, 0), [orders]);
-  const totalCost = useMemo(() => orders.reduce((s, o) => s + o.totalCost, 0), [orders]);
-  const totalProfit = useMemo(() => orders.reduce((s, o) => s + o.netProfit, 0), [orders]);
+  const totalRev = useMemo(() => orders.reduce((s, o) => s + (o.sellingPrice || 0), 0), [orders]);
+  const totalCost = useMemo(() => orders.reduce((s, o) => s + (o.totalCost || 0), 0), [orders]);
+  const totalProfit = useMemo(() => orders.reduce((s, o) => s + (o.netProfit || 0), 0), [orders]);
+
+  // Delivered only metrics (মডিউল ২: শুধুমাত্র Delivered অর্ডারগুলোর রেভিনিউ ও প্রফিট মূল হিসেবে ধরা)
+  const deliveredOrders = useMemo(() => orders.filter((o) => o.status === 'delivered'), [orders]);
+  const deliveredRev = useMemo(() => deliveredOrders.reduce((s, o) => s + (o.sellingPrice || 0), 0), [deliveredOrders]);
+  const deliveredProfit = useMemo(() => deliveredOrders.reduce((s, o) => s + (o.netProfit || 0), 0), [deliveredOrders]);
+  const deliveredCost = useMemo(() => deliveredOrders.reduce((s, o) => s + (o.totalCost || 0), 0), [deliveredOrders]);
 
   // CSV Export
   const handleExportCSV = () => {
@@ -125,12 +131,25 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
         </div>
       </div>
 
-      {/* 3 Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+      {/* 4 Summary Cards including Delivered Realized Profit */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
           <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Total Orders</div>
           <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
             {orders.length} <span className="text-xs font-normal text-neutral-500">orders</span>
+          </div>
+          <div className="text-[11px] text-neutral-500 mt-0.5">
+            {deliveredOrders.length} টি সফল ডেলিভারি
+          </div>
+        </div>
+
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Total Revenue</div>
+          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
+            {formatCurrency(totalRev)}
+          </div>
+          <div className="text-[11px] text-neutral-500 mt-0.5">
+            Delivered বিক্রি: {formatCurrency(deliveredRev)}
           </div>
         </div>
 
@@ -139,19 +158,100 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
           <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
             {formatCurrency(totalCost)}
           </div>
+          <div className="text-[11px] text-neutral-500 mt-0.5">
+            পণ্য, প্যাকেজিং ও কুরিয়ার
+          </div>
         </div>
 
-        <div className="bg-emerald-50/70 p-3.5 sm:p-4 rounded-xl border border-emerald-200 shadow-2xs col-span-2 sm:col-span-1">
-          <div className="text-[10px] sm:text-xs text-emerald-800 font-bold uppercase tracking-wider truncate">Total Net Profit</div>
+        {/* Highlighted Delivered Realized Profit Card */}
+        <div className="bg-emerald-50/80 p-3.5 sm:p-4 rounded-xl border border-emerald-300 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-emerald-800 font-bold uppercase tracking-wider truncate">
+            Delivered আসল নিট লাভ
+          </div>
           <div className="text-lg sm:text-2xl font-extrabold font-mono text-emerald-900 mt-1 truncate">
-            {formatCurrency(totalProfit)}
+            {formatCurrency(deliveredProfit)}
+          </div>
+          <div className="text-[11px] text-emerald-700 font-medium mt-0.5">
+            সম্ভাব্য সর্বমোট: {formatCurrency(totalProfit)}
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-3 flex flex-col sm:flex-row gap-3 shadow-2xs">
-        <div className="flex-1 flex items-center gap-2">
+      {/* Filter and Search Bar with Quick Status Buttons */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-3.5 space-y-3 shadow-2xs">
+        {/* Quick Status Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pb-1 border-b border-neutral-100">
+          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mr-1">ফিল্টার:</span>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+              statusFilter === 'all'
+                ? 'bg-neutral-900 text-white'
+                : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+            }`}
+          >
+            সব অর্ডার ({orders.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('delivered')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+              statusFilter === 'delivered'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
+            }`}
+          >
+            ✓ Delivered ({deliveredOrders.length}) · লাভ {formatCurrency(deliveredProfit)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('pending')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              statusFilter === 'pending'
+                ? 'bg-amber-500 text-white'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-800'
+            }`}
+          >
+            Pending ({orders.filter((o) => o.status === 'pending').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('confirmed')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              statusFilter === 'confirmed'
+                ? 'bg-blue-600 text-white'
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-800'
+            }`}
+          >
+            Confirmed ({orders.filter((o) => o.status === 'confirmed').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('shipped')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              statusFilter === 'shipped'
+                ? 'bg-purple-600 text-white'
+                : 'bg-purple-50 hover:bg-purple-100 text-purple-800'
+            }`}
+          >
+            Shipped ({orders.filter((o) => o.status === 'shipped').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('cancelled')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              statusFilter === 'cancelled'
+                ? 'bg-rose-600 text-white'
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
+            }`}
+          >
+            Cancelled ({orders.filter((o) => o.status === 'cancelled').length})
+          </button>
+        </div>
+
+        {/* Search Input */}
+        <div className="flex items-center gap-2">
           <Search className="w-4 h-4 text-neutral-400 shrink-0 ml-1" />
           <input
             type="text"
@@ -160,22 +260,15 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
             onChange={(e) => setSearch(e.target.value)}
             className="w-full text-xs outline-none text-neutral-800 placeholder:text-neutral-400"
           />
-        </div>
-
-        <div className="sm:w-48">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-2.5 py-1.5 text-xs border border-neutral-200 rounded-lg bg-neutral-50 focus:outline-none font-medium"
-          >
-            <option value="all">All Statuses ({orders.length})</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="packaging">Packaging</option>
-            <option value="shipped">Shipped</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="text-xs text-neutral-400 hover:text-neutral-700 px-2"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 

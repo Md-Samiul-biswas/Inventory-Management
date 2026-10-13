@@ -10,20 +10,23 @@ import {
   Package,
   Truck,
   Box,
+  Megaphone,
+  Home,
+  Layers,
 } from 'lucide-react';
 import { ExpenseItem, Order } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
 interface ExpensesViewProps {
   expenses: ExpenseItem[];
-  orders: Order[];
+  orders?: Order[];
   onAddExpense: (expense: ExpenseItem) => void;
   onDeleteExpense: (id: string) => void;
 }
 
 export const ExpensesView: React.FC<ExpensesViewProps> = ({
   expenses,
-  orders,
+  orders = [],
   onAddExpense,
   onDeleteExpense,
 }) => {
@@ -35,15 +38,38 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
 
-  // Orders automated expenses
-  const orderProductCost = useMemo(() => orders.reduce((s, o) => s + o.totalProductCost, 0), [orders]);
-  const orderDeliveryCost = useMemo(() => orders.reduce((s, o) => s + o.transportCost, 0), [orders]);
-  const orderPackagingCost = useMemo(() => orders.reduce((s, o) => s + o.packagingCost, 0), [orders]);
-  const totalOrderExpenses = orderProductCost + orderDeliveryCost + orderPackagingCost;
+  // Real logged custom business expenses
+  const totalExpenses = useMemo(() => {
+    return expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  }, [expenses]);
 
-  // Custom recorded expenses
-  const totalCustomExpenses = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
-  const grandTotalExpenses = totalOrderExpenses + totalCustomExpenses;
+  const currentMonthPrefix = new Date().toISOString().slice(0, 7); // e.g. "2026-10"
+  const thisMonthExpenses = useMemo(() => {
+    return expenses
+      .filter((e) => (e.date || '').startsWith(currentMonthPrefix))
+      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  }, [expenses, currentMonthPrefix]);
+
+  const avgExpensePerEntry = useMemo(() => {
+    if (expenses.length === 0) return 0;
+    return Math.round(totalExpenses / expenses.length);
+  }, [expenses.length, totalExpenses]);
+
+  // Breakdown by logged categories (only calculated when expenses exist)
+  const categoryBreakdown = useMemo(() => {
+    if (expenses.length === 0) return [];
+
+    const map: Record<string, number> = {};
+    expenses.forEach((e) => {
+      const cat = e.category || 'Other';
+      map[cat] = (map[cat] || 0) + (Number(e.amount) || 0);
+    });
+
+    return Object.entries(map).map(([name, total]) => ({
+      name,
+      total,
+    }));
+  }, [expenses]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,12 +100,32 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
     setError('');
   };
 
+  const getCategoryIcon = (catName: string) => {
+    switch (catName) {
+      case 'Packaging':
+        return <Box className="w-4 h-4 text-purple-600" />;
+      case 'Delivery':
+        return <Truck className="w-4 h-4 text-amber-600" />;
+      case 'Product Restock':
+        return <Package className="w-4 h-4 text-blue-600" />;
+      case 'Marketing':
+        return <Megaphone className="w-4 h-4 text-rose-600" />;
+      case 'Rent & Utilities':
+        return <Home className="w-4 h-4 text-indigo-600" />;
+      default:
+        return <Receipt className="w-4 h-4 text-neutral-600" />;
+    }
+  };
+
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Expenses</h1>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            ব্যবসার নিয়মিত খরচসমূহ (ওভারহেড ও পরিচালন ব্যয়)
+          </p>
         </div>
 
         <button
@@ -92,76 +138,73 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
         </button>
       </div>
 
-      {/* 3 Overview Cards */}
+      {/* 3 Overview Cards - Based STRICTLY on logged expenses */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Grand Total Expenses</div>
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">
+            Total Business Expenses
+          </div>
           <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
-            {formatCurrency(grandTotalExpenses)}
+            {formatCurrency(totalExpenses)}
           </div>
           <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
-            Orders + Custom expenses
+            {expenses.length > 0 ? `${expenses.length} entries recorded` : 'কোনো খরচ এন্ট্রি নেই'}
           </div>
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Order Direct Expenses</div>
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">
+            This Month's Expenses
+          </div>
           <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
-            {formatCurrency(totalOrderExpenses)}
+            {formatCurrency(thisMonthExpenses)}
           </div>
           <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
-            Prod + Deliv + Packaging
+            Current month overheads
           </div>
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs col-span-2 sm:col-span-1">
-          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">Other Business Expenses</div>
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">
+            Average / Entry
+          </div>
           <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
-            {formatCurrency(totalCustomExpenses)}
+            {formatCurrency(avgExpensePerEntry)}
           </div>
           <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
-            Marketing & other
+            {expenses.length > 0 ? 'গড় প্রতি খরচ' : 'N/A'}
           </div>
         </div>
       </div>
 
-      {/* Expense Categories Breakdown */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4 space-y-3 shadow-2xs">
-        <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-          Expense Categories
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-              <Package className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[11px] text-neutral-500 font-medium">Product Cost (Orders)</div>
-              <div className="text-sm font-bold font-mono text-neutral-900">{formatCurrency(orderProductCost)}</div>
-            </div>
-          </div>
-
-          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-              <Truck className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[11px] text-neutral-500 font-medium">Delivery Fees</div>
-              <div className="text-sm font-bold font-mono text-neutral-900">{formatCurrency(orderDeliveryCost)}</div>
-            </div>
-          </div>
-
-          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
-              <Box className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[11px] text-neutral-500 font-medium">Packaging & Boxes</div>
-              <div className="text-sm font-bold font-mono text-neutral-900">{formatCurrency(orderPackagingCost)}</div>
-            </div>
+      {/* Expense Categories Breakdown - ONLY SHOWN WHEN EXPENSES EXIST */}
+      {expenses.length > 0 && categoryBreakdown.length > 0 && (
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 space-y-3 shadow-2xs">
+          <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+            Expense Categories (খরচের ক্যাটাগরি)
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {categoryBreakdown.map((cat) => (
+              <div
+                key={cat.name}
+                className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center gap-3"
+              >
+                <div className="w-8 h-8 rounded-lg bg-white border border-neutral-200 flex items-center justify-center shrink-0">
+                  {getCategoryIcon(cat.name)}
+                </div>
+                <div>
+                  <div className="text-[11px] text-neutral-500 font-medium">
+                    {cat.name}
+                  </div>
+                  <div className="text-sm font-bold font-mono text-neutral-900">
+                    {formatCurrency(cat.total)}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Logged Business Expenses Table */}
       <div className="bg-white rounded-xl border border-neutral-200 shadow-2xs overflow-hidden">
@@ -169,7 +212,9 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
           <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
             Logged Business Expenses List
           </h2>
-          <span className="text-xs text-neutral-400 font-mono">{expenses.length} entries</span>
+          <span className="text-xs text-neutral-500 font-mono font-semibold">
+            {expenses.length} entries
+          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -187,8 +232,12 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
             <tbody className="divide-y divide-neutral-100">
               {expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-xs text-neutral-400">
-                    No custom expenses logged. Click "Add Expense" to log overheads.
+                  <td colSpan={6} className="py-12 text-center text-xs text-neutral-400 space-y-1">
+                    <Receipt className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
+                    <p className="font-semibold text-neutral-600">এখনো কোনো খরচ যুক্ত করা হয়নি</p>
+                    <p className="text-neutral-400">
+                      দোকানের ওভারহেড বা পরিচালন ব্যয় যোগ করতে উপরের "+ Add Expense" বাটনে ক্লিক করুন।
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -215,7 +264,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                       <button
                         type="button"
                         onClick={() => onDeleteExpense(exp.id)}
-                        className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                        className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg cursor-pointer transition-colors"
                         title="Delete Expense"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -257,7 +306,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Courier advance deposit, Facebook Ads"
+                  placeholder="e.g. Courier advance deposit, Packaging boxes, Facebook Ads"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"

@@ -31,9 +31,9 @@ import { DashboardView } from './components/DashboardView';
 import { OrdersListView } from './components/OrdersListView';
 import { CourierView } from './components/CourierView';
 import { PackagesView } from './components/PackagesView';
-import { StockListView } from './components/StockListView';
 import { ProductListView } from './components/ProductListView';
 import { ExpensesView } from './components/ExpensesView';
+import { ReportsView } from './components/ReportsView';
 import { InvestmentView } from './components/InvestmentView';
 import { OrderFormView } from './components/OrderFormView';
 import { KeepNotesView } from './components/KeepNotesView';
@@ -169,11 +169,21 @@ export default function App() {
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === prodId) {
-          return { ...p, stock: Math.max(0, p.stock + delta) };
+          const updatedStock = Math.max(0, p.stock + delta);
+          return { ...p, stock: updatedStock };
         }
         return p;
       })
     );
+    showToast(delta >= 0 ? `স্টক +${delta} বাড়ানো হয়েছে` : `স্টক ${delta} কমানো হয়েছে`, 'info');
+  };
+
+  const handleSetProductStock = (prodId: string, newStock: number) => {
+    const validStock = Math.max(0, Math.floor(newStock));
+    setProducts((prev) =>
+      prev.map((p) => (p.id === prodId ? { ...p, stock: validStock } : p))
+    );
+    showToast(`স্টক সফলভাবে ${validStock} এ আপডেট করা হয়েছে`, 'success');
   };
 
   // Order Actions
@@ -451,20 +461,15 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'stock-list' && (
-          <StockListView
-            products={products}
-            onRestockProduct={handleRestockProduct}
-            onNavigateToProducts={() => setCurrentTab('product-list')}
-          />
-        )}
-
-        {currentTab === 'product-list' && (
+        {(currentTab === 'product-list' || currentTab === 'stock-list') && (
           <ProductListView
             products={products}
             onAddProduct={handleAddProduct}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
+            onRestockProduct={handleRestockProduct}
+            onSetProductStock={handleSetProductStock}
+            initialTab={currentTab === 'stock-list' ? 'stock' : 'products'}
           />
         )}
 
@@ -474,6 +479,17 @@ export default function App() {
             orders={orders}
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
+          />
+        )}
+
+        {currentTab === 'reports' && (
+          <ReportsView
+            orders={orders}
+            expenses={expenses}
+            products={products}
+            shopName={settings.shopName}
+            onNavigateToTab={(tab) => setCurrentTab(tab)}
+            onOpenOrderDetails={(ord) => setSelectedOrderForInvoice(ord)}
           />
         )}
 
