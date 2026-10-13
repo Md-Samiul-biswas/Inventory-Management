@@ -8,6 +8,7 @@ import {
   Phone,
   Download,
   ShoppingBag,
+  Truck,
 } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
 import { formatCurrency, formatPercent, STATUS_MAP } from '../utils/formatters';
@@ -18,6 +19,7 @@ interface OrdersListViewProps {
   onUpdateStatus: (orderId: string, newStatus: OrderStatus) => void;
   onDeleteOrder: (orderId: string) => void;
   onAddNewOrder: () => void;
+  onSendToCourier?: (order: Order) => void;
 }
 
 export const OrdersListView: React.FC<OrdersListViewProps> = ({
@@ -26,6 +28,7 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
   onUpdateStatus,
   onDeleteOrder,
   onAddNewOrder,
+  onSendToCourier,
 }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -214,6 +217,12 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
                           <Calendar className="w-3 h-3" />
                           <span>{ord.orderDate}</span>
                         </div>
+                        {ord.courierConsignmentId && (
+                          <div className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            <Truck className="w-2.5 h-2.5" />
+                            <span>{ord.courierConsignmentId}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Customer */}
@@ -276,6 +285,16 @@ export const OrdersListView: React.FC<OrdersListViewProps> = ({
                       {/* Actions */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
+                          {onSendToCourier && (
+                            <button
+                              type="button"
+                              onClick={() => onSendToCourier(ord)}
+                              className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"
+                              title="পাঠাও কুরিয়ারে পাঠান (Send to Pathao)"
+                            >
+                              <Truck className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onOpenOrderDetails(ord)}

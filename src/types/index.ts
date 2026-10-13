@@ -60,6 +60,10 @@ export interface Order {
   orderDate: string; // YYYY-MM-DD
   deliveryDate?: string;
   notes?: string;
+  courierProvider?: CourierProvider;
+  courierConsignmentId?: string;
+  courierTrackingCode?: string;
+  courierStatus?: CourierDeliveryStatus;
   createdAt: string;
 }
 
@@ -122,3 +126,61 @@ export interface KeepNote {
   createdAt: string;
   updatedAt: string;
 }
+
+export type CourierProvider = 'pathao' | 'steadfast' | 'redx' | 'custom';
+
+export type CourierDeliveryStatus =
+  | 'pending'
+  | 'in_review'
+  | 'pickup_requested'
+  | 'in_transit'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'returned'
+  | 'cancelled';
+
+export interface CourierShipment {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  consignmentId: string; // e.g. PTH-829104 or STF-583921
+  trackingCode: string;
+  courier: CourierProvider;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  recipientCity?: string;
+  recipientZone?: string;
+  codAmount: number;
+  deliveryCharge: number;
+  weightKg: number;
+  itemType: 'parcel' | 'document' | 'box';
+  instruction?: string;
+  status: CourierDeliveryStatus;
+  statusNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourierApiConfig {
+  defaultCourier: CourierProvider;
+  pathao: {
+    enabled: boolean;
+    clientId: string;
+    clientSecret: string;
+    username: string;
+    storeId: string;
+    storeName?: string;
+    sandbox: boolean;
+  };
+  steadfast: {
+    enabled: boolean;
+    apiKey: string;
+    secretKey: string;
+  };
+  redx: {
+    enabled: boolean;
+    apiToken: string;
+  };
+}
+

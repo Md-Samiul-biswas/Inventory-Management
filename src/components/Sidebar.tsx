@@ -12,11 +12,13 @@ import {
   PackageCheck,
   ChevronRight,
   StickyNote,
+  Truck,
 } from 'lucide-react';
 
 export type TabType =
   | 'dashboard'
   | 'orders'
+  | 'courier'
   | 'package'
   | 'stock-list'
   | 'product-list'
@@ -33,7 +35,8 @@ interface SidebarProps {
   orderCount: number;
   packageCount?: number;
   notesCount?: number;
-  onOpenSettings: () => void;
+  courierActiveCount?: number;
+  onOpenSettings: (tab?: 'general' | 'courier') => void;
   shopName: string;
 }
 
@@ -45,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   orderCount,
   packageCount = 0,
   notesCount = 0,
+  courierActiveCount = 0,
   onOpenSettings,
   shopName,
 }) => {
@@ -58,6 +62,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'orders' as TabType,
       label: 'Order Management',
       icon: ShoppingBag,
+    },
+    {
+      id: 'courier' as TabType,
+      label: 'Courier',
+      icon: Truck,
+      badge: courierActiveCount > 0 ? courierActiveCount : undefined,
     },
     {
       id: 'package' as TabType,
@@ -164,16 +174,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Bottom Settings */}
-      <div className="p-3 border-t border-neutral-100">
+      <div className="p-3 border-t border-neutral-100 space-y-1">
         <button
-          onClick={onOpenSettings}
-          className="w-full flex items-center justify-between p-2 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 text-xs font-semibold transition-colors cursor-pointer"
+          onClick={() => onOpenSettings('general')}
+          className="w-full flex items-center justify-between p-2 rounded-xl text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 text-xs font-semibold transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-neutral-400" />
             <span>Settings</span>
           </div>
           <ChevronRight className="w-4 h-4 text-neutral-400" />
+        </button>
+
+        {/* Courier Setting Submenu */}
+        <button
+          onClick={() => onOpenSettings('courier')}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 text-xs font-medium transition-colors cursor-pointer pl-7 group"
+        >
+          <div className="flex items-center gap-2">
+            <Truck className="w-3.5 h-3.5 text-rose-500 group-hover:scale-105 transition-transform" />
+            <span className="text-[11px] font-semibold">Courier Setting</span>
+          </div>
+          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+            API
+          </span>
         </button>
       </div>
     </aside>

@@ -3,6 +3,7 @@
   "appId": "1:768398137007:web:d02e79ae962b50dff8e65a",
   "apiKey": "AIzaSyAchCF9YUqEnbVHaEfAQHZfpXQ3cVZntpo",
   "authDomain": "grounded-mariner-12w8r.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-inventorymanagem-99c6738e-4321-4488-adba-e24b42be46cd",
   "storageBucket": "grounded-mariner-12w8r.firebasestorage.app",
   "messagingSenderId": "768398137007",
   "measurementId": "",

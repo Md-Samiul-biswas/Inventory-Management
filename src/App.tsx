@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { ProductItem, Order, OrderStatus, AppSettings, ExpenseItem, SavedPackage, KeepNote } from './types';
+import { ProductItem, Order, OrderStatus, AppSettings, ExpenseItem, SavedPackage, KeepNote, CourierShipment, CourierApiConfig } from './types';
 import {
   loadProducts,
   saveProducts,
@@ -18,6 +18,10 @@ import {
   savePackages,
   loadNotes,
   saveNotes,
+  loadCourierShipments,
+  saveCourierShipments,
+  loadCourierConfig,
+  saveCourierConfig,
   loadSettings,
   saveSettings,
   resetAllData,
@@ -25,6 +29,7 @@ import {
 import { Sidebar, TabType } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { OrdersListView } from './components/OrdersListView';
+import { CourierView } from './components/CourierView';
 import { PackagesView } from './components/PackagesView';
 import { StockListView } from './components/StockListView';
 import { ProductListView } from './components/ProductListView';
@@ -43,6 +48,9 @@ export default function App() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>(loadExpenses);
   const [packages, setPackages] = useState<SavedPackage[]>(loadPackages);
   const [notes, setNotes] = useState<KeepNote[]>(loadNotes);
+  const [shipments, setShipments] = useState<CourierShipment[]>(loadCourierShipments);
+  const [courierConfig, setCourierConfig] = useState<CourierApiConfig>(loadCourierConfig);
+  const [selectedOrderForCourier, setSelectedOrderForCourier] = useState<Order | null>(null);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
 
   const [user, setUser] = useState<User | null>(null);
@@ -52,6 +60,7 @@ export default function App() {
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [selectedPackageForOrder, setSelectedPackageForOrder] = useState<SavedPackage | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsModalTab, setSettingsModalTab] = useState<'general' | 'courier'>('general');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -91,6 +100,14 @@ export default function App() {
   useEffect(() => {
     saveNotes(notes);
   }, [notes]);
+
+  useEffect(() => {
+    saveCourierShipments(shipments);
+  }, [shipments]);
+
+  useEffect(() => {
+    saveCourierConfig(courierConfig);
+  }, [courierConfig]);
 
   useEffect(() => {
     saveSettings(settings);
@@ -241,6 +258,34 @@ export default function App() {
     showToast('নোট মুছে ফেলা হয়েছে', 'info');
   };
 
+  // Courier Actions
+  const handleSaveShipment = (newShipment: CourierShipment, updatedOrder?: Order) => {
+    setShipments((prev) => [newShipment, ...prev]);
+    if (updatedOrder) {
+      setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+    }
+    showToast(`পার্সেল ${newShipment.consignmentId} কুরিয়ারে বুকিং সফল!`, 'success');
+  };
+
+  const handleUpdateShipment = (updated: CourierShipment) => {
+    setShipments((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    showToast(`শিপমেন্ট ${updated.consignmentId} স্ট্যাটাস আপডেট হয়েছে!`, 'success');
+  };
+
+  const handleDeleteShipment = (shipmentId: string) => {
+    setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
+    showToast('শিপমেন্ট সরানো হয়েছে', 'info');
+  };
+
+  const handleSendToCourier = (order: Order) => {
+    setSelectedOrderForCourier(order);
+    setCurrentTab('courier');
+  };
+
+  const courierActiveCount = useMemo(() => {
+    return shipments.filter((s) => s.status !== 'delivered' && s.status !== 'cancelled').length;
+  }, [shipments]);
+
   // Reset Data
   const handleResetData = () => {
     const res = resetAllData();
@@ -319,7 +364,11 @@ export default function App() {
           orderCount={orders.length}
           packageCount={packages.length}
           notesCount={notes.length}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+          courierActiveCount={courierActiveCount}
+          onOpenSettings={(tab = 'general') => {
+            setSettingsModalTab(tab);
+            setIsSettingsOpen(true);
+          }}
           shopName={settings.shopName}
         />
       </div>
@@ -339,7 +388,9 @@ export default function App() {
               orderCount={orders.length}
               packageCount={packages.length}
               notesCount={notes.length}
-              onOpenSettings={() => {
+              courierActiveCount={courierActiveCount}
+              onOpenSettings={(tab = 'general') => {
+                setSettingsModalTab(tab);
                 setIsSettingsOpen(true);
                 setIsMobileMenuOpen(false);
               }}
@@ -369,6 +420,24 @@ export default function App() {
             onUpdateStatus={handleUpdateOrderStatus}
             onDeleteOrder={handleDeleteOrder}
             onAddNewOrder={() => setCurrentTab('new-order')}
+            onSendToCourier={handleSendToCourier}
+          />
+        )}
+
+        {currentTab === 'courier' && (
+          <CourierView
+            orders={orders}
+            shipments={shipments}
+            courierConfig={courierConfig}
+            onSaveShipment={handleSaveShipment}
+            onUpdateShipment={handleUpdateShipment}
+            onDeleteShipment={handleDeleteShipment}
+            onSaveConfig={(cfg) => {
+              setCourierConfig(cfg);
+              showToast('কুরিয়ার API সেটিংস সংরক্ষিত হয়েছে!', 'success');
+            }}
+            onUpdateOrderStatus={handleUpdateOrderStatus}
+            preselectedOrder={selectedOrderForCourier}
           />
         )}
 
@@ -466,10 +535,16 @@ export default function App() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        initialTab={settingsModalTab}
         settings={settings}
         onSaveSettings={(newSettings) => {
           setSettings(newSettings);
           showToast('Settings saved!');
+        }}
+        courierConfig={courierConfig}
+        onSaveCourierConfig={(newConfig) => {
+          setCourierConfig(newConfig);
+          showToast('Courier API settings saved!', 'success');
         }}
         onResetData={handleResetData}
         onImportData={handleImportData}

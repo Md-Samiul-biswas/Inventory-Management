@@ -1,4 +1,4 @@
-import { ProductItem, Order, AppSettings, ExpenseItem, SavedPackage, KeepNote } from '../types';
+import { ProductItem, Order, AppSettings, ExpenseItem, SavedPackage, KeepNote, CourierShipment, CourierApiConfig } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_SETTINGS, INITIAL_EXPENSES, INITIAL_PACKAGES } from '../data/initialData';
 
 const PRODUCTS_KEY = 'packagecraft_products_v2';
@@ -59,6 +59,143 @@ export function saveNotes(notes: KeepNote[]): void {
     console.error(e);
   }
 }
+
+const COURIER_SHIPMENTS_KEY = 'packagecraft_courier_shipments_v1';
+const COURIER_CONFIG_KEY = 'packagecraft_courier_config_v1';
+
+export const DEFAULT_COURIER_CONFIG: CourierApiConfig = {
+  defaultCourier: 'pathao',
+  pathao: {
+    enabled: true,
+    clientId: 'pth_live_budgetchoice_01',
+    clientSecret: 'pth_sec_live_bcbd99281',
+    username: 'budgetchoicebd@gmail.com',
+    storeId: 'BCBD-STORE-01',
+    storeName: 'Budget Choice BD',
+    sandbox: false,
+  },
+  steadfast: {
+    enabled: true,
+    apiKey: 'stf_api_key_8849201',
+    secretKey: 'stf_sec_8849201',
+  },
+  redx: {
+    enabled: false,
+    apiToken: '',
+  },
+};
+
+export const INITIAL_COURIER_SHIPMENTS: CourierShipment[] = [
+  {
+    id: 'ship-101',
+    orderId: 'ord-1',
+    orderNumber: 'ORD-1001',
+    consignmentId: 'PTH-829104',
+    trackingCode: 'PTH829104',
+    courier: 'pathao',
+    customerName: 'Rahim Ahmed',
+    customerPhone: '01711223344',
+    customerAddress: 'House 14, Road 5, Dhanmondi, Dhaka',
+    recipientCity: 'Dhaka',
+    recipientZone: 'Dhanmondi',
+    codAmount: 0,
+    deliveryCharge: 80,
+    weightKg: 0.5,
+    itemType: 'parcel',
+    instruction: 'Handle with care (Gift items inside)',
+    status: 'in_transit',
+    statusNote: 'Rider assigned, parcel on the way',
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+  },
+  {
+    id: 'ship-102',
+    orderId: 'ord-2',
+    orderNumber: 'ORD-1002',
+    consignmentId: 'STF-583921',
+    trackingCode: 'STF583921',
+    courier: 'steadfast',
+    customerName: 'Nusrat Jahan',
+    customerPhone: '01988776655',
+    customerAddress: 'Agrabad C/A, Chittagong',
+    recipientCity: 'Chittagong',
+    recipientZone: 'Agrabad',
+    codAmount: 850,
+    deliveryCharge: 130,
+    weightKg: 1.2,
+    itemType: 'box',
+    instruction: 'Call customer before delivery',
+    status: 'delivered',
+    statusNote: 'Delivered successfully, COD collected',
+    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+  },
+];
+
+export function loadCourierShipments(): CourierShipment[] {
+  try {
+    const raw = localStorage.getItem(COURIER_SHIPMENTS_KEY);
+    if (!raw) {
+      localStorage.setItem(COURIER_SHIPMENTS_KEY, JSON.stringify(INITIAL_COURIER_SHIPMENTS));
+      return INITIAL_COURIER_SHIPMENTS;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    return INITIAL_COURIER_SHIPMENTS;
+  }
+}
+
+export function saveCourierShipments(shipments: CourierShipment[]): void {
+  try {
+    localStorage.setItem(COURIER_SHIPMENTS_KEY, JSON.stringify(shipments));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+export function loadCourierConfig(): CourierApiConfig {
+  try {
+    const raw = localStorage.getItem(COURIER_CONFIG_KEY);
+    if (!raw) {
+      localStorage.setItem(COURIER_CONFIG_KEY, JSON.stringify(DEFAULT_COURIER_CONFIG));
+      return DEFAULT_COURIER_CONFIG;
+    }
+    const parsed = JSON.parse(raw);
+    const merged: CourierApiConfig = {
+      ...DEFAULT_COURIER_CONFIG,
+      ...parsed,
+      pathao: {
+        ...DEFAULT_COURIER_CONFIG.pathao,
+        ...(parsed.pathao || {}),
+        storeName: parsed.pathao?.storeName || 'Budget Choice BD',
+        username: (!parsed.pathao?.username || parsed.pathao?.username === 'merchant@store.com')
+          ? 'budgetchoicebd@gmail.com'
+          : parsed.pathao.username,
+        storeId: (!parsed.pathao?.storeId || parsed.pathao?.storeId === 'STORE-8812')
+          ? 'BCBD-STORE-01'
+          : parsed.pathao.storeId,
+        clientId: (!parsed.pathao?.clientId || parsed.pathao?.clientId === 'demo_client_pth_9941')
+          ? 'pth_live_budgetchoice_01'
+          : parsed.pathao.clientId,
+        clientSecret: (!parsed.pathao?.clientSecret || parsed.pathao?.clientSecret === 'pth_sec_live_99218204')
+          ? 'pth_sec_live_bcbd99281'
+          : parsed.pathao.clientSecret,
+      },
+    };
+    return merged;
+  } catch (e) {
+    return DEFAULT_COURIER_CONFIG;
+  }
+}
+
+export function saveCourierConfig(config: CourierApiConfig): void {
+  try {
+    localStorage.setItem(COURIER_CONFIG_KEY, JSON.stringify(config));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 
 
 export function loadProducts(): ProductItem[] {
