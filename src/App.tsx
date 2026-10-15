@@ -5,114 +5,133 @@ import {
   PackageCheck,
   CheckCircle2,
   AlertCircle,
+  Truck,
+  Plus,
 } from 'lucide-react';
-import { ProductItem, Order, OrderStatus, AppSettings, ExpenseItem, SavedPackage, KeepNote, CourierShipment, CourierApiConfig } from './types';
+import {
+  ProductItem,
+  Supplier,
+  Customer,
+  Purchase,
+  Order,
+  OrderStatus,
+  StockMovementType,
+  StockLedgerEntry,
+  FinancialAccount,
+  AccountTransaction,
+  ExpenseItem,
+  ReturnRecord,
+  AppSettings,
+  SavedPackage,
+  CourierParcel,
+  CourierApiSettings,
+  CourierParcelStatus,
+  PackagingMaterial,
+} from './types';
 import {
   loadProducts,
   saveProducts,
+  loadSuppliers,
+  saveSuppliers,
+  loadCustomers,
+  saveCustomers,
+  loadPurchases,
+  savePurchases,
   loadOrders,
   saveOrders,
   loadExpenses,
   saveExpenses,
+  loadAccounts,
+  saveAccounts,
+  loadTransactions,
+  saveTransactions,
+  loadStockLedger,
+  saveStockLedger,
+  loadReturns,
+  saveReturns,
   loadPackages,
   savePackages,
-  loadNotes,
-  saveNotes,
-  loadCourierShipments,
-  saveCourierShipments,
-  loadCourierConfig,
-  saveCourierConfig,
   loadSettings,
   saveSettings,
+  loadParcels,
+  saveParcels,
+  loadCourierSettings,
+  saveCourierSettings,
+  loadPackagingMaterials,
+  savePackagingMaterials,
   resetAllData,
+  exportAllData,
 } from './utils/storage';
+import {
+  calculateNewWeightedAverageCost,
+  formatDate,
+  getTodayString,
+} from './utils/accounting';
+
 import { Sidebar, TabType } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { OrdersListView } from './components/OrdersListView';
 import { CourierView } from './components/CourierView';
-import { PackagesView } from './components/PackagesView';
+import { ProfitExpenseAnalyticsView } from './components/ProfitExpenseAnalyticsView';
+import { PurchasesView } from './components/PurchasesView';
+import { PurchaseModal } from './components/PurchaseModal';
+import { StockLedgerView } from './components/StockLedgerView';
 import { ProductListView } from './components/ProductListView';
+import { PackagesView } from './components/PackagesView';
+import { CustomersView } from './components/CustomersView';
+import { SuppliersView } from './components/SuppliersView';
 import { ExpensesView } from './components/ExpensesView';
-import { ReportsView } from './components/ReportsView';
-import { InvestmentView } from './components/InvestmentView';
+import { AccountsView } from './components/AccountsView';
+import { ProfitLossView } from './components/ProfitLossView';
+import { ReturnsView } from './components/ReturnsView';
 import { OrderFormView } from './components/OrderFormView';
-import { KeepNotesView } from './components/KeepNotesView';
 import { OrderInvoiceModal } from './components/OrderInvoiceModal';
 import { SettingsModal } from './components/SettingsModal';
-import { initAuth, testConnection } from './lib/firebase';
-import { User } from 'firebase/auth';
 
 export default function App() {
   const [products, setProducts] = useState<ProductItem[]>(loadProducts);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(loadSuppliers);
+  const [customers, setCustomers] = useState<Customer[]>(loadCustomers);
+  const [purchases, setPurchases] = useState<Purchase[]>(loadPurchases);
   const [orders, setOrders] = useState<Order[]>(loadOrders);
   const [expenses, setExpenses] = useState<ExpenseItem[]>(loadExpenses);
+  const [accounts, setAccounts] = useState<FinancialAccount[]>(loadAccounts);
+  const [transactions, setTransactions] = useState<AccountTransaction[]>(loadTransactions);
+  const [stockLedger, setStockLedger] = useState<StockLedgerEntry[]>(loadStockLedger);
+  const [returns, setReturns] = useState<ReturnRecord[]>(loadReturns);
   const [packages, setPackages] = useState<SavedPackage[]>(loadPackages);
-  const [notes, setNotes] = useState<KeepNote[]>(loadNotes);
-  const [shipments, setShipments] = useState<CourierShipment[]>(loadCourierShipments);
-  const [courierConfig, setCourierConfig] = useState<CourierApiConfig>(loadCourierConfig);
-  const [selectedOrderForCourier, setSelectedOrderForCourier] = useState<Order | null>(null);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
-
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [parcels, setParcels] = useState<CourierParcel[]>(loadParcels);
+  const [courierSettings, setCourierSettings] = useState<CourierApiSettings>(loadCourierSettings);
+  const [orderToDispatch, setOrderToDispatch] = useState<Order | null>(null);
+  const [packagingMaterials, setPackagingMaterials] = useState<PackagingMaterial[]>(loadPackagingMaterials);
 
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [selectedPackageForOrder, setSelectedPackageForOrder] = useState<SavedPackage | null>(null);
+  const [isNewPurchaseModalOpen, setIsNewPurchaseModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsModalTab, setSettingsModalTab] = useState<'general' | 'courier'>('general');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(
+    null
+  );
 
-  // Initialize Auth & test connection
-  useEffect(() => {
-    testConnection();
-    const unsubscribe = initAuth(
-      (currentUser, token) => {
-        setUser(currentUser);
-        if (token) setAccessToken(token);
-      },
-      () => {
-        setUser(null);
-        setAccessToken(null);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
-
-  // Sync to storage
-  useEffect(() => {
-    saveProducts(products);
-  }, [products]);
-
-  useEffect(() => {
-    saveOrders(orders);
-  }, [orders]);
-
-  useEffect(() => {
-    saveExpenses(expenses);
-  }, [expenses]);
-
-  useEffect(() => {
-    savePackages(packages);
-  }, [packages]);
-
-  useEffect(() => {
-    saveNotes(notes);
-  }, [notes]);
-
-  useEffect(() => {
-    saveCourierShipments(shipments);
-  }, [shipments]);
-
-  useEffect(() => {
-    saveCourierConfig(courierConfig);
-  }, [courierConfig]);
-
-  useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
-
+  // Sync state to local storage
+  useEffect(() => saveProducts(products), [products]);
+  useEffect(() => saveSuppliers(suppliers), [suppliers]);
+  useEffect(() => saveCustomers(customers), [customers]);
+  useEffect(() => savePurchases(purchases), [purchases]);
+  useEffect(() => saveOrders(orders), [orders]);
+  useEffect(() => saveExpenses(expenses), [expenses]);
+  useEffect(() => saveAccounts(accounts), [accounts]);
+  useEffect(() => saveTransactions(transactions), [transactions]);
+  useEffect(() => saveStockLedger(stockLedger), [stockLedger]);
+  useEffect(() => saveReturns(returns), [returns]);
+  useEffect(() => savePackages(packages), [packages]);
+  useEffect(() => saveSettings(settings), [settings]);
+  useEffect(() => saveParcels(parcels), [parcels]);
+  useEffect(() => saveCourierSettings(courierSettings), [courierSettings]);
+  useEffect(() => savePackagingMaterials(packagingMaterials), [packagingMaterials]);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ text, type });
@@ -121,15 +140,74 @@ export default function App() {
     }, 2800);
   };
 
-  const totalStockUnits = useMemo(() => {
-    return products.reduce((acc, p) => acc + p.stock, 0);
-  }, [products]);
-
-  // Handle Save Order
+  // 1. Order Saving & Customer Ledger Sync
   const handleSaveOrder = (newOrder: Order, shouldDeductStock: boolean) => {
     setOrders((prev) => [newOrder, ...prev]);
 
+    // Update customer stats
+    setCustomers((prev) => {
+      const existing = prev.find(
+        (c) =>
+          c.id === newOrder.customerId ||
+          c.phone === newOrder.customerPhone ||
+          c.name.toLowerCase() === newOrder.customerName.toLowerCase()
+      );
+      if (existing) {
+        return prev.map((c) =>
+          c.id === existing.id
+            ? {
+                ...c,
+                totalOrders: c.totalOrders + 1,
+                totalPurchases: c.totalPurchases + newOrder.totalAmount,
+                amountPaid: c.amountPaid + (newOrder.paidAmount || 0),
+                outstandingDue: c.outstandingDue + (newOrder.dueAmount || 0),
+              }
+            : c
+        );
+      }
+      // Create new customer if not found
+      const created: Customer = {
+        id: `cust-${Date.now()}`,
+        name: newOrder.customerName,
+        phone: newOrder.customerPhone,
+        address: newOrder.customerAddress,
+        totalOrders: 1,
+        totalPurchases: newOrder.totalAmount,
+        amountPaid: newOrder.paidAmount || 0,
+        outstandingDue: newOrder.dueAmount || 0,
+        createdAt: getTodayString(),
+      };
+      return [created, ...prev];
+    });
+
+    // Deduct stock & create ledger entries
     if (shouldDeductStock) {
+      newOrder.items.forEach((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        if (prod) {
+          const newStock = Math.max(0, prod.stock - item.quantity);
+          const ledgerEntry: StockLedgerEntry = {
+            id: `sl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            productId: prod.id,
+            productName: prod.name,
+            sku: prod.sku,
+            date: newOrder.orderDate || getTodayString(),
+            movementType: 'sales_order',
+            quantityIn: 0,
+            quantityOut: item.quantity,
+            referenceType: 'order',
+            referenceNumber: newOrder.orderNumber,
+            unitCost: prod.unitCost,
+            totalValue: prod.unitCost * item.quantity,
+            balanceStockAfter: newStock,
+            user: 'Sales Dispatch',
+            reason: `Order #${newOrder.orderNumber} for ${newOrder.customerName}`,
+            createdAt: new Date().toISOString(),
+          };
+          setStockLedger((l) => [ledgerEntry, ...l]);
+        }
+      });
+
       setProducts((prev) => {
         return prev.map((prod) => {
           const matched = newOrder.items.find((it) => it.productId === prod.id);
@@ -139,408 +217,1031 @@ export default function App() {
           return prod;
         });
       });
+
+      // Deduct packaging materials stock if materials were used
+      if (newOrder.packagingItems && newOrder.packagingItems.length > 0) {
+        setPackagingMaterials((prev) =>
+          prev.map((mat) => {
+            const used = newOrder.packagingItems?.find((it) => it.materialId === mat.id);
+            if (used) {
+              return { ...mat, stock: Math.max(0, mat.stock - used.quantity) };
+            }
+            return mat;
+          })
+        );
+      }
     }
 
-    showToast(`Order #${newOrder.orderNumber} saved successfully!`, 'success');
+    showToast(`Order #${newOrder.orderNumber} created successfully!`, 'success');
     setSelectedOrderForInvoice(newOrder);
     setCurrentTab('orders');
   };
 
-  // Product Actions
-  const handleAddProduct = (newProd: ProductItem) => {
-    setProducts((prev) => [newProd, ...prev]);
-    showToast(`Product "${newProd.name}" added!`, 'success');
-  };
+  // Order Status update with stock reversal on cancellation
+  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
 
-  const handleUpdateProduct = (updated: ProductItem) => {
-    setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-    showToast(`Product "${updated.name}" updated!`, 'success');
-  };
+    if (newStatus === 'cancelled' && order.isStockDeducted) {
+      // Revert product stock
+      setProducts((prev) =>
+        prev.map((p) => {
+          const item = order.items.find((it) => it.productId === p.id);
+          if (item) {
+            return { ...p, stock: p.stock + item.quantity };
+          }
+          return p;
+        })
+      );
 
-  const handleDeleteProduct = (prodId: string) => {
-    const p = products.find((prod) => prod.id === prodId);
-    if (window.confirm(`Delete product "${p?.name || 'Item'}"?`)) {
-      setProducts((prev) => prev.filter((item) => item.id !== prodId));
-      showToast('Product deleted', 'info');
-    }
-  };
-
-  const handleRestockProduct = (prodId: string, delta: number) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === prodId) {
-          const updatedStock = Math.max(0, p.stock + delta);
-          return { ...p, stock: updatedStock };
+      // Revert packaging materials stock if materials were used
+      if (order.packagingItems && order.packagingItems.length > 0) {
+        setPackagingMaterials((prev) =>
+          prev.map((mat) => {
+            const used = order.packagingItems?.find((it) => it.materialId === mat.id);
+            if (used) {
+              return { ...mat, stock: mat.stock + used.quantity };
+            }
+            return mat;
+          })
+        );
+      }
+      // Log stock return
+      order.items.forEach((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        if (prod) {
+          const ledgerEntry: StockLedgerEntry = {
+            id: `sl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            productId: prod.id,
+            productName: prod.name,
+            sku: prod.sku,
+            date: getTodayString(),
+            movementType: 'stock_adjustment',
+            quantityIn: item.quantity,
+            quantityOut: 0,
+            referenceType: 'order',
+            referenceNumber: order.orderNumber,
+            unitCost: prod.unitCost,
+            totalValue: prod.unitCost * item.quantity,
+            balanceStockAfter: prod.stock + item.quantity,
+            user: 'System Reversal',
+            reason: `Order #${order.orderNumber} Cancelled - Inventory Restored`,
+            createdAt: new Date().toISOString(),
+          };
+          setStockLedger((l) => [ledgerEntry, ...l]);
         }
-        return p;
+      });
+    }
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: newStatus,
+              isStockDeducted: newStatus === 'cancelled' ? false : o.isStockDeducted,
+            }
+          : o
+      )
+    );
+    showToast(`Order status updated to ${newStatus}`, 'info');
+  };
+
+  // Record Order Partial/Full Payment
+  const handleRecordOrderPayment = (orderId: string, amount: number, accountId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    const account = accounts.find((a) => a.id === accountId);
+    if (!order || !account) return;
+
+    const newPaid = (order.paidAmount || 0) + amount;
+    const total = order.totalAmount ?? order.sellingPrice ?? 0;
+    const newDue = Math.max(0, total - newPaid);
+    const newPayStatus = newDue <= 0 ? 'paid' : 'partial';
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              paidAmount: newPaid,
+              dueAmount: newDue,
+              paymentStatus: newPayStatus,
+            }
+          : o
+      )
+    );
+
+    // Update account balance
+    const newAccBalance = account.currentBalance + amount;
+    setAccounts((prev) =>
+      prev.map((a) => (a.id === accountId ? { ...a, currentBalance: newAccBalance } : a))
+    );
+
+    // Create Account Transaction
+    const tx: AccountTransaction = {
+      id: `tx-${Date.now()}`,
+      accountId,
+      accountName: account.name,
+      date: getTodayString(),
+      type: 'customer_payment',
+      amount,
+      balanceAfter: newAccBalance,
+      referenceNumber: order.orderNumber,
+      description: `Payment received for Order #${order.orderNumber} (${order.customerName})`,
+      createdAt: new Date().toISOString(),
+    };
+    setTransactions((prev) => [tx, ...prev]);
+
+    // Update Customer Dues
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c.phone === order.customerPhone || c.name === order.customerName
+          ? {
+              ...c,
+              amountPaid: c.amountPaid + amount,
+              outstandingDue: Math.max(0, c.outstandingDue - amount),
+            }
+          : c
+      )
+    );
+
+    showToast(`Payment of ৳${amount} recorded for Order #${order.orderNumber}!`, 'success');
+  };
+
+  // 2. Purchases & WAC Inventory Valuation
+  const handleSavePurchase = (newPurchase: Purchase) => {
+    setPurchases((prev) => [newPurchase, ...prev]);
+
+    // Update Supplier Balance
+    setSuppliers((prev) =>
+      prev.map((s) => {
+        if (s.id === newPurchase.supplierId) {
+          const totalPur = s.totalPurchases + newPurchase.totalAmount;
+          const totalPaid = s.totalPaid + newPurchase.paidAmount;
+          const outBalance = s.openingBalance + totalPur - totalPaid;
+          return {
+            ...s,
+            totalPurchases: totalPur,
+            totalPaid: totalPaid,
+            outstandingBalance: outBalance,
+          };
+        }
+        return s;
       })
     );
-    showToast(delta >= 0 ? `স্টক +${delta} বাড়ানো হয়েছে` : `স্টক ${delta} কমানো হয়েছে`, 'info');
-  };
 
-  const handleSetProductStock = (prodId: string, newStock: number) => {
-    const validStock = Math.max(0, Math.floor(newStock));
-    setProducts((prev) =>
-      prev.map((p) => (p.id === prodId ? { ...p, stock: validStock } : p))
-    );
-    showToast(`স্টক সফলভাবে ${validStock} এ আপডেট করা হয়েছে`, 'success');
-  };
-
-  // Order Actions
-  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-    );
-    showToast('Order status updated!', 'success');
-  };
-
-  const handleDeleteOrder = (orderId: string) => {
-    const target = orders.find((o) => o.id === orderId);
-    if (!target) return;
-
-    if (window.confirm(`Delete Order #${target.orderNumber}?`)) {
-      if (target.isStockDeducted) {
-        const restore = window.confirm('Restore inventory stock for these items?');
-        if (restore) {
-          setProducts((prev) => {
-            return prev.map((prod) => {
-              const matched = target.items.find((it) => it.productId === prod.id);
-              if (matched) {
-                return { ...prod, stock: prod.stock + matched.quantity };
-              }
-              return prod;
-            });
-          });
-        }
+    // If purchase paid immediately from an account
+    if (newPurchase.paidAmount > 0 && newPurchase.paymentAccountId) {
+      const account = accounts.find((a) => a.id === newPurchase.paymentAccountId);
+      if (account) {
+        const newBal = account.currentBalance - newPurchase.paidAmount;
+        setAccounts((prev) =>
+          prev.map((a) => (a.id === account.id ? { ...a, currentBalance: newBal } : a))
+        );
+        const tx: AccountTransaction = {
+          id: `tx-${Date.now()}`,
+          accountId: account.id,
+          accountName: account.name,
+          date: newPurchase.purchaseDate,
+          type: 'supplier_payment',
+          amount: -newPurchase.paidAmount,
+          balanceAfter: newBal,
+          referenceNumber: newPurchase.purchaseNumber,
+          description: `Disbursed for Purchase #${newPurchase.purchaseNumber} (${newPurchase.supplierName})`,
+          createdAt: new Date().toISOString(),
+        };
+        setTransactions((prev) => [tx, ...prev]);
       }
-
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      showToast('Order removed', 'info');
     }
+
+    // If received, update stock and recalculate Weighted Average Cost (WAC)
+    if (newPurchase.status === 'received') {
+      newPurchase.items.forEach((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        if (prod) {
+          const newWAC = calculateNewWeightedAverageCost(
+            prod.stock,
+            prod.unitCost,
+            item.quantity,
+            item.effectiveUnitCost
+          );
+          const newStock = prod.stock + item.quantity;
+
+          const ledgerEntry: StockLedgerEntry = {
+            id: `sl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            productId: prod.id,
+            productName: prod.name,
+            sku: prod.sku,
+            date: newPurchase.purchaseDate,
+            movementType: 'purchase_receive',
+            quantityIn: item.quantity,
+            quantityOut: 0,
+            referenceType: 'purchase',
+            referenceNumber: newPurchase.purchaseNumber,
+            unitCost: item.effectiveUnitCost,
+            totalValue: item.totalCost,
+            balanceStockAfter: newStock,
+            user: 'Purchase Intake',
+            reason: `PO #${newPurchase.purchaseNumber} from ${newPurchase.supplierName}`,
+            createdAt: new Date().toISOString(),
+          };
+          setStockLedger((l) => [ledgerEntry, ...l]);
+        }
+      });
+
+      setProducts((prev) =>
+        prev.map((prod) => {
+          const matched = newPurchase.items.find((it) => it.productId === prod.id);
+          if (matched) {
+            const newWAC = calculateNewWeightedAverageCost(
+              prod.stock,
+              prod.unitCost,
+              matched.quantity,
+              matched.effectiveUnitCost
+            );
+            return {
+              ...prod,
+              stock: prod.stock + matched.quantity,
+              unitCost: newWAC,
+            };
+          }
+          return prod;
+        })
+      );
+    }
+
+    showToast(`Purchase invoice #${newPurchase.purchaseNumber} saved!`, 'success');
   };
 
-  // Expense Actions
+  const handleReceivePurchase = (purchaseId: string) => {
+    const purchase = purchases.find((p) => p.id === purchaseId);
+    if (!purchase || purchase.status === 'received') return;
+
+    purchase.items.forEach((item) => {
+      const prod = products.find((p) => p.id === item.productId);
+      if (prod) {
+        const newWAC = calculateNewWeightedAverageCost(
+          prod.stock,
+          prod.unitCost,
+          item.quantity,
+          item.effectiveUnitCost
+        );
+        const newStock = prod.stock + item.quantity;
+        const ledgerEntry: StockLedgerEntry = {
+          id: `sl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          productId: prod.id,
+          productName: prod.name,
+          sku: prod.sku,
+          date: getTodayString(),
+          movementType: 'purchase_receive',
+          quantityIn: item.quantity,
+          quantityOut: 0,
+          referenceType: 'purchase',
+          referenceNumber: purchase.purchaseNumber,
+          unitCost: item.effectiveUnitCost,
+          totalValue: item.totalCost,
+          balanceStockAfter: newStock,
+          user: 'Warehouse Receiver',
+          reason: `PO #${purchase.purchaseNumber} received from ${purchase.supplierName}`,
+          createdAt: new Date().toISOString(),
+        };
+        setStockLedger((l) => [ledgerEntry, ...l]);
+      }
+    });
+
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const matched = purchase.items.find((it) => it.productId === prod.id);
+        if (matched) {
+          const newWAC = calculateNewWeightedAverageCost(
+            prod.stock,
+            prod.unitCost,
+            matched.quantity,
+            matched.effectiveUnitCost
+          );
+          return {
+            ...prod,
+            stock: prod.stock + matched.quantity,
+            unitCost: newWAC,
+          };
+        }
+        return prod;
+      })
+    );
+
+    setPurchases((prev) =>
+      prev.map((p) =>
+        p.id === purchaseId ? { ...p, status: 'received', isStockReceived: true } : p
+      )
+    );
+
+    showToast(`PO #${purchase.purchaseNumber} received. Stock & WAC updated!`, 'success');
+  };
+
+  // 3. Stock Adjustment & Reconciliation
+  const handleAddStockAdjustment = (
+    productId: string,
+    delta: number,
+    movementType: StockMovementType,
+    reason: string
+  ) => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+
+    const newStock = Math.max(0, prod.stock + delta);
+    setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, stock: newStock } : p)));
+
+    const ledgerEntry: StockLedgerEntry = {
+      id: `sl-${Date.now()}`,
+      productId: prod.id,
+      productName: prod.name,
+      sku: prod.sku,
+      date: getTodayString(),
+      movementType,
+      quantityIn: delta > 0 ? delta : 0,
+      quantityOut: delta < 0 ? Math.abs(delta) : 0,
+      referenceType: 'adjustment',
+      referenceNumber: `ADJ-${Date.now().toString().slice(-4)}`,
+      unitCost: prod.unitCost,
+      totalValue: Math.abs(delta) * prod.unitCost,
+      balanceStockAfter: newStock,
+      user: 'Stock Auditor',
+      reason,
+      createdAt: new Date().toISOString(),
+    };
+    setStockLedger((prev) => [ledgerEntry, ...prev]);
+
+    showToast(`Stock updated for ${prod.name}: ${newStock} units`, 'info');
+  };
+
+  // 4. Expense Recording
   const handleAddExpense = (expense: ExpenseItem) => {
     setExpenses((prev) => [expense, ...prev]);
-    showToast('Expense recorded!', 'success');
-  };
 
-  const handleDeleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-    showToast('Expense removed', 'info');
-  };
+    // Deduct from financial account
+    const account = accounts.find((a) => a.id === expense.paymentAccountId);
+    if (account) {
+      const newBal = account.currentBalance - expense.amount;
+      setAccounts((prev) =>
+        prev.map((a) => (a.id === account.id ? { ...a, currentBalance: newBal } : a))
+      );
 
-  // Package Actions
-  const handleSavePackage = (newPkg: SavedPackage) => {
-    setPackages((prev) => {
-      const exists = prev.some((p) => p.id === newPkg.id);
-      if (exists) {
-        return prev.map((p) => (p.id === newPkg.id ? newPkg : p));
-      }
-      return [newPkg, ...prev];
-    });
-    showToast(`Package "${newPkg.name}" saved!`, 'success');
-  };
-
-  const handleDeletePackage = (pkgId: string) => {
-    setPackages((prev) => prev.filter((p) => p.id !== pkgId));
-    showToast('Package removed', 'info');
-  };
-
-  const handleSelectPackageForOrder = (pkg: SavedPackage) => {
-    setSelectedPackageForOrder(pkg);
-    setCurrentTab('new-order');
-    showToast(`Package "${pkg.name}" loaded for new order!`, 'success');
-  };
-
-  // Keep Notes Actions
-  const handleSaveNote = (newNote: KeepNote) => {
-    setNotes((prev) => [newNote, ...prev]);
-    showToast(`নোট "${newNote.title}" সংরক্ষিত হয়েছে!`, 'success');
-  };
-
-  const handleUpdateNote = (updatedNote: KeepNote) => {
-    setNotes((prev) => prev.map((n) => (n.id === updatedNote.id ? updatedNote : n)));
-  };
-
-  const handleDeleteNote = (noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== noteId));
-    showToast('নোট মুছে ফেলা হয়েছে', 'info');
-  };
-
-  // Courier Actions
-  const handleSaveShipment = (newShipment: CourierShipment, updatedOrder?: Order) => {
-    setShipments((prev) => [newShipment, ...prev]);
-    if (updatedOrder) {
-      setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+      const tx: AccountTransaction = {
+        id: `tx-${Date.now()}`,
+        accountId: account.id,
+        accountName: account.name,
+        date: expense.date,
+        type: 'expense',
+        amount: -expense.amount,
+        balanceAfter: newBal,
+        referenceNumber: expense.expenseNumber,
+        description: `${expense.category}: ${expense.title}`,
+        createdAt: new Date().toISOString(),
+      };
+      setTransactions((prev) => [tx, ...prev]);
     }
-    showToast(`পার্সেল ${newShipment.consignmentId} কুরিয়ারে বুকিং সফল!`, 'success');
+
+    showToast(`Expense #${expense.expenseNumber} recorded!`, 'success');
   };
 
-  const handleUpdateShipment = (updated: CourierShipment) => {
-    setShipments((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-    showToast(`শিপমেন্ট ${updated.consignmentId} স্ট্যাটাস আপডেট হয়েছে!`, 'success');
+  // Packaging Materials Handlers (Boxes, Stickers, Ribbons, Tapes)
+  const handleAddPackagingMaterial = (mat: PackagingMaterial) => {
+    setPackagingMaterials((prev) => [mat, ...prev]);
+    showToast(`ম্যাটেরিয়াল "${mat.name}" যুক্ত করা হয়েছে!`, 'success');
   };
 
-  const handleDeleteShipment = (shipmentId: string) => {
-    setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
-    showToast('শিপমেন্ট সরানো হয়েছে', 'info');
+  const handleUpdatePackagingMaterial = (mat: PackagingMaterial) => {
+    setPackagingMaterials((prev) => prev.map((m) => (m.id === mat.id ? mat : m)));
+    showToast(`ম্যাটেরিয়াল "${mat.name}" আপডেট করা হয়েছে!`, 'success');
   };
 
-  const handleSendToCourier = (order: Order) => {
-    setSelectedOrderForCourier(order);
-    setCurrentTab('courier');
+  const handleDeletePackagingMaterial = (id: string) => {
+    setPackagingMaterials((prev) => prev.filter((m) => m.id !== id));
+    showToast('ম্যাটেরিয়াল মুছে ফেলা হয়েছে', 'info');
   };
 
-  const courierActiveCount = useMemo(() => {
-    return shipments.filter((s) => s.status !== 'delivered' && s.status !== 'cancelled').length;
-  }, [shipments]);
-
-  // Reset Data
-  const handleResetData = () => {
-    const res = resetAllData();
-    setProducts(res.products);
-    setOrders(res.orders);
-    setExpenses(res.expenses);
-    setSettings(res.settings);
-    if (res.packages) setPackages(res.packages);
-    showToast('Data reset to default demo data');
+  const handleAdjustPackagingStock = (id: string, delta: number) => {
+    setPackagingMaterials((prev) =>
+      prev.map((m) => {
+        if (m.id === id) {
+          const nextStock = Math.max(0, m.stock + delta);
+          return { ...m, stock: nextStock };
+        }
+        return m;
+      })
+    );
+    showToast('ম্যাটেরিয়াল স্টক সমন্বয় করা হয়েছে', 'success');
   };
 
-  // Import Data
-  const handleImportData = (data: {
-    products: ProductItem[];
-    orders: Order[];
-    expenses?: ExpenseItem[];
-    settings: AppSettings;
-  }) => {
-    setProducts(data.products);
-    setOrders(data.orders);
-    if (data.expenses) setExpenses(data.expenses);
-    setSettings(data.settings);
-    showToast('Data imported successfully!');
+  // 5. Financial Account Transfers
+  const handleTransferFunds = (
+    fromAccountId: string,
+    toAccountId: string,
+    amount: number,
+    notes: string
+  ) => {
+    const fromAcc = accounts.find((a) => a.id === fromAccountId);
+    const toAcc = accounts.find((a) => a.id === toAccountId);
+    if (!fromAcc || !toAcc) return;
+
+    const fromNewBal = fromAcc.currentBalance - amount;
+    const toNewBal = toAcc.currentBalance + amount;
+
+    setAccounts((prev) =>
+      prev.map((a) => {
+        if (a.id === fromAccountId) return { ...a, currentBalance: fromNewBal };
+        if (a.id === toAccountId) return { ...a, currentBalance: toNewBal };
+        return a;
+      })
+    );
+
+    const refNum = `TRF-${Date.now().toString().slice(-4)}`;
+    const txOut: AccountTransaction = {
+      id: `tx-${Date.now()}-out`,
+      accountId: fromAcc.id,
+      accountName: fromAcc.name,
+      date: getTodayString(),
+      type: 'transfer_out',
+      amount: -amount,
+      balanceAfter: fromNewBal,
+      referenceNumber: refNum,
+      description: `Transfer to ${toAcc.name}${notes ? ` - ${notes}` : ''}`,
+      linkedAccountId: toAcc.id,
+      linkedAccountName: toAcc.name,
+      createdAt: new Date().toISOString(),
+    };
+    const txIn: AccountTransaction = {
+      id: `tx-${Date.now()}-in`,
+      accountId: toAcc.id,
+      accountName: toAcc.name,
+      date: getTodayString(),
+      type: 'transfer_in',
+      amount: amount,
+      balanceAfter: toNewBal,
+      referenceNumber: refNum,
+      description: `Transfer from ${fromAcc.name}${notes ? ` - ${notes}` : ''}`,
+      linkedAccountId: fromAcc.id,
+      linkedAccountName: fromAcc.name,
+      createdAt: new Date().toISOString(),
+    };
+
+    setTransactions((prev) => [txIn, txOut, ...prev]);
+    showToast(`Transferred ৳${amount} from ${fromAcc.name} to ${toAcc.name}!`, 'success');
+  };
+
+  const handleAdjustBalance = (accountId: string, newBalance: number, reason: string) => {
+    const account = accounts.find((a) => a.id === accountId);
+    if (!account) return;
+
+    const diff = newBalance - account.currentBalance;
+    setAccounts((prev) =>
+      prev.map((a) => (a.id === accountId ? { ...a, currentBalance: newBalance } : a))
+    );
+
+    const tx: AccountTransaction = {
+      id: `tx-${Date.now()}`,
+      accountId,
+      accountName: account.name,
+      date: getTodayString(),
+      type: 'adjustment',
+      amount: diff,
+      balanceAfter: newBalance,
+      referenceNumber: `REC-${Date.now().toString().slice(-4)}`,
+      description: `Reconciliation adjustment: ${reason}`,
+      createdAt: new Date().toISOString(),
+    };
+    setTransactions((prev) => [tx, ...prev]);
+    showToast(`Account balance reconciled for ${account.name}`, 'info');
+  };
+
+  // 6. Supplier Payment Recording
+  const handleRecordSupplierPayment = (
+    supplierId: string,
+    amount: number,
+    accountId: string,
+    payNotes: string
+  ) => {
+    const supplier = suppliers.find((s) => s.id === supplierId);
+    const account = accounts.find((a) => a.id === accountId);
+    if (!supplier || !account) return;
+
+    setSuppliers((prev) =>
+      prev.map((s) =>
+        s.id === supplierId
+          ? {
+              ...s,
+              totalPaid: s.totalPaid + amount,
+              outstandingBalance: Math.max(0, s.outstandingBalance - amount),
+            }
+          : s
+      )
+    );
+
+    const newAccBal = account.currentBalance - amount;
+    setAccounts((prev) =>
+      prev.map((a) => (a.id === accountId ? { ...a, currentBalance: newAccBal } : a))
+    );
+
+    const tx: AccountTransaction = {
+      id: `tx-${Date.now()}`,
+      accountId,
+      accountName: account.name,
+      date: getTodayString(),
+      type: 'supplier_payment',
+      amount: -amount,
+      balanceAfter: newAccBal,
+      referenceNumber: `PMT-${Date.now().toString().slice(-4)}`,
+      description: `Settled payment to supplier ${supplier.companyName} (${payNotes || 'Due clearance'})`,
+      createdAt: new Date().toISOString(),
+    };
+    setTransactions((prev) => [tx, ...prev]);
+
+    showToast(`Payment of ৳${amount} disbursed to ${supplier.companyName}!`, 'success');
+  };
+
+  // 7. Customer Payment Collection
+  const handleRecordCustomerPayment = (
+    customerId: string,
+    amount: number,
+    accountId: string,
+    colNotes: string
+  ) => {
+    const customer = customers.find((c) => c.id === customerId);
+    const account = accounts.find((a) => a.id === accountId);
+    if (!customer || !account) return;
+
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c.id === customerId
+          ? {
+              ...c,
+              amountPaid: c.amountPaid + amount,
+              outstandingDue: Math.max(0, c.outstandingDue - amount),
+            }
+          : c
+      )
+    );
+
+    const newAccBal = account.currentBalance + amount;
+    setAccounts((prev) =>
+      prev.map((a) => (a.id === accountId ? { ...a, currentBalance: newAccBal } : a))
+    );
+
+    const tx: AccountTransaction = {
+      id: `tx-${Date.now()}`,
+      accountId,
+      accountName: account.name,
+      date: getTodayString(),
+      type: 'customer_payment',
+      amount: amount,
+      balanceAfter: newAccBal,
+      referenceNumber: `REC-${Date.now().toString().slice(-4)}`,
+      description: `Customer due collected from ${customer.name} (${colNotes || 'Receipt'})`,
+      createdAt: new Date().toISOString(),
+    };
+    setTransactions((prev) => [tx, ...prev]);
+
+    showToast(`Collected ৳${amount} from ${customer.name}!`, 'success');
+  };
+
+  // 8. Returns and Restocks
+  const handleAddReturn = (record: ReturnRecord, shouldRestock: boolean) => {
+    setReturns((prev) => [record, ...prev]);
+
+    const prod = products.find((p) => p.id === record.productId);
+
+    if (shouldRestock && prod) {
+      const newStock = prod.stock + record.quantity;
+      setProducts((prev) =>
+        prev.map((p) => (p.id === record.productId ? { ...p, stock: newStock } : p))
+      );
+
+      const ledgerEntry: StockLedgerEntry = {
+        id: `sl-${Date.now()}`,
+        productId: prod.id,
+        productName: prod.name,
+        sku: prod.sku,
+        date: record.date,
+        movementType: 'sales_return_sellable',
+        quantityIn: record.quantity,
+        quantityOut: 0,
+        referenceType: 'return',
+        referenceNumber: record.returnNumber,
+        unitCost: prod.unitCost,
+        totalValue: prod.unitCost * record.quantity,
+        balanceStockAfter: newStock,
+        user: 'Return Officer',
+        reason: `Restocked return from ${record.partyName}: ${record.reason}`,
+        createdAt: new Date().toISOString(),
+      };
+      setStockLedger((l) => [ledgerEntry, ...l]);
+    } else if (record.condition === 'damaged' && prod) {
+      const ledgerEntry: StockLedgerEntry = {
+        id: `sl-${Date.now()}`,
+        productId: prod.id,
+        productName: prod.name,
+        sku: prod.sku,
+        date: record.date,
+        movementType: 'sales_return_damaged',
+        quantityIn: 0,
+        quantityOut: 0,
+        referenceType: 'return',
+        referenceNumber: record.returnNumber,
+        unitCost: prod.unitCost,
+        totalValue: 0,
+        balanceStockAfter: prod.stock,
+        user: 'Return Officer',
+        reason: `Damaged item return from ${record.partyName} (Not added to sellable stock)`,
+        createdAt: new Date().toISOString(),
+      };
+      setStockLedger((l) => [ledgerEntry, ...l]);
+    }
+
+    // Refund disbursement from account
+    if (record.refundAmount > 0 && record.refundAccountId) {
+      const account = accounts.find((a) => a.id === record.refundAccountId);
+      if (account) {
+        const newBal = account.currentBalance - record.refundAmount;
+        setAccounts((prev) =>
+          prev.map((a) => (a.id === account.id ? { ...a, currentBalance: newBal } : a))
+        );
+        const tx: AccountTransaction = {
+          id: `tx-${Date.now()}`,
+          accountId: account.id,
+          accountName: account.name,
+          date: record.date,
+          type: 'refund',
+          amount: -record.refundAmount,
+          balanceAfter: newBal,
+          referenceNumber: record.returnNumber,
+          description: `Customer refund disbursed for Return #${record.returnNumber} (${record.partyName})`,
+          createdAt: new Date().toISOString(),
+        };
+        setTransactions((prev) => [tx, ...prev]);
+      }
+    }
+
+    showToast(`Return #${record.returnNumber} processed successfully!`, 'success');
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100/60 text-neutral-900 flex flex-col md:flex-row antialiased selection:bg-emerald-100">
+    <div className="min-h-screen bg-neutral-50 flex flex-col font-sans text-neutral-900 selection:bg-emerald-100 selection:text-emerald-900">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 animate-in fade-in slide-in-from-bottom-5 duration-150 no-print">
-          <div
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg border ${
-              toast.type === 'success'
-                ? 'bg-emerald-950 text-white border-emerald-700'
-                : toast.type === 'error'
-                ? 'bg-rose-950 text-white border-rose-700'
-                : 'bg-neutral-900 text-white border-neutral-700'
-            }`}
-          >
-            {toast.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            )}
-            <span>{toast.text}</span>
-          </div>
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-neutral-900 text-white text-xs font-semibold shadow-2xl transition-all">
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-amber-400" />
+          )}
+          <span>{toast.text}</span>
         </div>
       )}
 
-      {/* Mobile Top Header */}
+      {/* Mobile Top Header (Menu button strictly on the LEFT as requested!) */}
       <div className="md:hidden bg-white border-b border-neutral-200 px-3.5 py-2.5 flex items-center justify-between no-print sticky top-0 z-30">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-1.5 -ml-1 text-neutral-700 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 cursor-pointer transition-colors"
-            aria-label="Toggle menu"
+            className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg cursor-pointer"
+            aria-label="Toggle navigation menu"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5 text-neutral-800" /> : <Menu className="w-5 h-5 text-neutral-800" />}
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
-              <PackageCheck className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-sm text-neutral-900 truncate">{settings.shopName}</span>
+          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            <PackageCheck className="w-4 h-4" />
           </div>
+          <span className="font-bold text-neutral-900 text-xs tracking-tight truncate max-w-[170px]">
+            {settings.shopName}
+          </span>
         </div>
+
+        {/* No 'New Order' button per instructions */}
       </div>
 
-      {/* Desktop Left Sidebar with requested menus */}
-      <div className="hidden md:block">
-        <Sidebar
-          currentTab={currentTab}
-          onSelectTab={(tab) => setCurrentTab(tab)}
-          productCount={products.length}
-          totalStockUnits={totalStockUnits}
-          orderCount={orders.length}
-          packageCount={packages.length}
-          notesCount={notes.length}
-          courierActiveCount={courierActiveCount}
-          onOpenSettings={(tab = 'general') => {
-            setSettingsModalTab(tab);
-            setIsSettingsOpen(true);
-          }}
-          shopName={settings.shopName}
-        />
-      </div>
-
-      {/* Mobile Drawer */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-neutral-900/50 flex">
-          <div className="w-72 bg-white h-full shadow-xl">
-            <Sidebar
-              currentTab={currentTab}
-              onSelectTab={(tab) => {
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block">
+          <Sidebar
+            currentTab={currentTab}
+            onSelectTab={(tab) => {
+              if (tab === 'new-purchase') {
+                setIsNewPurchaseModalOpen(true);
+              } else {
                 setCurrentTab(tab);
-                setIsMobileMenuOpen(false);
-              }}
-              productCount={products.length}
-              totalStockUnits={totalStockUnits}
-              orderCount={orders.length}
-              packageCount={packages.length}
-              notesCount={notes.length}
-              courierActiveCount={courierActiveCount}
-              onOpenSettings={(tab = 'general') => {
-                setSettingsModalTab(tab);
-                setIsSettingsOpen(true);
-                setIsMobileMenuOpen(false);
-              }}
-              shopName={settings.shopName}
-            />
-          </div>
-          <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />
-        </div>
-      )}
-
-      {/* Main Viewport */}
-      <main className="flex-1 overflow-y-auto min-h-screen">
-        {currentTab === 'dashboard' && (
-          <DashboardView
-            orders={orders}
-            products={products}
-            expenses={expenses}
-            onNavigateToTab={(tab) => setCurrentTab(tab)}
-            onOpenOrderDetails={(ord) => setSelectedOrderForInvoice(ord)}
-          />
-        )}
-
-        {currentTab === 'orders' && (
-          <OrdersListView
-            orders={orders}
-            onOpenOrderDetails={(ord) => setSelectedOrderForInvoice(ord)}
-            onUpdateStatus={handleUpdateOrderStatus}
-            onDeleteOrder={handleDeleteOrder}
-            onAddNewOrder={() => setCurrentTab('new-order')}
-            onSendToCourier={handleSendToCourier}
-          />
-        )}
-
-        {currentTab === 'courier' && (
-          <CourierView
-            orders={orders}
-            shipments={shipments}
-            courierConfig={courierConfig}
-            onSaveShipment={handleSaveShipment}
-            onUpdateShipment={handleUpdateShipment}
-            onDeleteShipment={handleDeleteShipment}
-            onSaveConfig={(cfg) => {
-              setCourierConfig(cfg);
-              showToast('কুরিয়ার API সেটিংস সংরক্ষিত হয়েছে!', 'success');
+              }
             }}
-            onUpdateOrderStatus={handleUpdateOrderStatus}
-            preselectedOrder={selectedOrderForCourier}
-          />
-        )}
-
-        {currentTab === 'package' && (
-          <PackagesView
-            packages={packages}
-            products={products}
-            onSavePackage={handleSavePackage}
-            onDeletePackage={handleDeletePackage}
-            onSelectPackageForOrder={handleSelectPackageForOrder}
-          />
-        )}
-
-        {(currentTab === 'product-list' || currentTab === 'stock-list') && (
-          <ProductListView
-            products={products}
-            onAddProduct={handleAddProduct}
-            onUpdateProduct={handleUpdateProduct}
-            onDeleteProduct={handleDeleteProduct}
-            onRestockProduct={handleRestockProduct}
-            onSetProductStock={handleSetProductStock}
-            initialTab={currentTab === 'stock-list' ? 'stock' : 'products'}
-          />
-        )}
-
-        {currentTab === 'expenses' && (
-          <ExpensesView
-            expenses={expenses}
-            orders={orders}
-            onAddExpense={handleAddExpense}
-            onDeleteExpense={handleDeleteExpense}
-          />
-        )}
-
-        {currentTab === 'reports' && (
-          <ReportsView
-            orders={orders}
-            expenses={expenses}
-            products={products}
+            onOpenSettings={() => setIsSettingsOpen(true)}
             shopName={settings.shopName}
-            onNavigateToTab={(tab) => setCurrentTab(tab)}
-            onOpenOrderDetails={(ord) => setSelectedOrderForInvoice(ord)}
           />
+        </div>
+
+        {/* Mobile Drawer (opens from LEFT) */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-40 md:hidden flex">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-2xs"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+            <div className="relative w-64 bg-white h-full shadow-2xl z-50 flex flex-col">
+              <Sidebar
+                currentTab={currentTab}
+                onSelectTab={(tab) => {
+                  if (tab === 'new-purchase') {
+                    setIsNewPurchaseModalOpen(true);
+                  } else {
+                    setCurrentTab(tab);
+                  }
+                  setIsMobileMenuOpen(false);
+                }}
+                onOpenSettings={() => {
+                  setIsSettingsOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                shopName={settings.shopName}
+              />
+            </div>
+          </div>
         )}
 
-        {currentTab === 'investment' && (
-          <InvestmentView
-            products={products}
-            orders={orders}
-            expenses={expenses}
-          />
-        )}
+        {/* Main Workspace Body */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {currentTab === 'dashboard' && (
+            <DashboardView
+              products={products}
+              orders={orders}
+              purchases={purchases}
+              expenses={expenses}
+              suppliers={suppliers}
+              customers={customers}
+              accounts={accounts}
+              onSelectTab={(tab) => {
+                if (tab === 'new-purchase') setIsNewPurchaseModalOpen(true);
+                else setCurrentTab(tab);
+              }}
+              onViewOrder={(ord) => setSelectedOrderForInvoice(ord)}
+            />
+          )}
 
-        {currentTab === 'keep-notes' && (
-          <KeepNotesView
-            notes={notes}
-            onSaveNote={handleSaveNote}
-            onDeleteNote={handleDeleteNote}
-            onUpdateNote={handleUpdateNote}
-            user={user}
-            accessToken={accessToken}
-            onLoginSuccess={(u, token) => {
-              setUser(u);
-              setAccessToken(token);
-            }}
-            onLogoutSuccess={() => {
-              setUser(null);
-              setAccessToken(null);
-            }}
-          />
-        )}
+          {currentTab === 'orders' && (
+            <OrdersListView
+              orders={orders}
+              accounts={accounts}
+              onOpenOrderDetails={(ord) => setSelectedOrderForInvoice(ord)}
+              onUpdateStatus={handleUpdateOrderStatus}
+              onRecordOrderPayment={handleRecordOrderPayment}
+              onDeleteOrder={(orderId) => {
+                if (confirm('Delete this order?')) {
+                  setOrders((prev) => prev.filter((o) => o.id !== orderId));
+                  showToast('Order removed', 'info');
+                }
+              }}
+              onAddNewOrder={() => setCurrentTab('new-order')}
+              onSendToCourier={(ord) => {
+                setOrderToDispatch(ord);
+                setCurrentTab('courier');
+              }}
+            />
+          )}
 
-        {currentTab === 'new-order' && (
-          <OrderFormView
-            products={products}
-            settings={settings}
-            packages={packages}
-            initialPackage={selectedPackageForOrder}
-            onSaveOrder={(newOrder, shouldDeductStock) => {
-              setSelectedPackageForOrder(null);
-              handleSaveOrder(newOrder, shouldDeductStock);
-            }}
-            onAddNewProduct={handleAddProduct}
-            onCancel={() => {
-              setSelectedPackageForOrder(null);
-              setCurrentTab('dashboard');
-            }}
-          />
-        )}
-      </main>
+          {currentTab === 'courier' && (
+            <CourierView
+              parcels={parcels}
+              orders={orders}
+              settings={settings}
+              courierSettings={courierSettings}
+              initialOrderToDispatch={orderToDispatch}
+              onClearInitialOrder={() => setOrderToDispatch(null)}
+              onSaveParcel={(newParcel) => {
+                setParcels((prev) => [newParcel, ...prev]);
+                showToast(
+                  `Parcel ${newParcel.consignmentId} dispatched via ${newParcel.courierPartner}!`,
+                  'success'
+                );
+              }}
+              onUpdateParcelStatus={(id, status) => {
+                setParcels((prev) =>
+                  prev.map((p) => (p.id === id ? { ...p, status } : p))
+                );
+                showToast('Parcel delivery status updated', 'info');
+              }}
+              onDeleteParcel={(id) => {
+                setParcels((prev) => prev.filter((p) => p.id !== id));
+                showToast('Parcel removed from courier log', 'info');
+              }}
+              onSaveCourierSettings={(s) => {
+                setCourierSettings(s);
+                showToast('Courier API credentials saved', 'success');
+              }}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
+            />
+          )}
 
+          {currentTab === 'profit-expense-analytics' && (
+            <ProfitExpenseAnalyticsView
+              orders={orders}
+              expenses={expenses}
+              accounts={accounts}
+              onAddExpense={handleAddExpense}
+              onDeleteExpense={(id) => {
+                setExpenses((prev) => prev.filter((e) => e.id !== id));
+                showToast('Expense record deleted', 'info');
+              }}
+            />
+          )}
 
-      {/* Printable Invoice Modal */}
+          {currentTab === 'purchases' && (
+            <PurchasesView
+              purchases={purchases}
+              suppliers={suppliers}
+              products={products}
+              accounts={accounts}
+              onOpenNewPurchase={() => setIsNewPurchaseModalOpen(true)}
+              onReceivePurchase={handleReceivePurchase}
+              onRecordSupplierPayment={(sId, amt, aId, notes) =>
+                handleRecordSupplierPayment(sId, amt, aId, notes || '')
+              }
+            />
+          )}
+
+          {currentTab === 'stock-ledger' && (
+            <StockLedgerView
+              products={products}
+              ledger={stockLedger}
+              onAddStockAdjustment={handleAddStockAdjustment}
+            />
+          )}
+
+          {currentTab === 'products' && (
+            <ProductListView
+              products={products}
+              orders={orders}
+              purchases={purchases}
+              packagingMaterials={packagingMaterials}
+              onAddProduct={(prod) => {
+                setProducts((prev) => [prod, ...prev]);
+                showToast(`Product "${prod.name}" added!`, 'success');
+              }}
+              onUpdateProduct={(prod) => {
+                setProducts((prev) => prev.map((p) => (p.id === prod.id ? prod : p)));
+                showToast(`Product "${prod.name}" updated!`, 'success');
+              }}
+              onDeleteProduct={(id) => {
+                setProducts((prev) => prev.filter((p) => p.id !== id));
+                showToast('Product deleted', 'info');
+              }}
+              onBulkImport={(newProds) => {
+                setProducts((prev) => [...newProds, ...prev]);
+                showToast(`Imported ${newProds.length} products!`, 'success');
+              }}
+              onAddPackagingMaterial={handleAddPackagingMaterial}
+              onUpdatePackagingMaterial={handleUpdatePackagingMaterial}
+              onDeletePackagingMaterial={handleDeletePackagingMaterial}
+              onAdjustPackagingStock={handleAdjustPackagingStock}
+            />
+          )}
+
+          {currentTab === 'packages' && (
+            <PackagesView
+              packages={packages}
+              products={products}
+              onSelectPackageForOrder={(pkg) => {
+                setSelectedPackageForOrder(pkg);
+                setCurrentTab('new-order');
+              }}
+              onSavePackage={(newPkg) => {
+                setPackages((prev) => [newPkg, ...prev]);
+                showToast(`Package "${newPkg.name}" saved!`, 'success');
+              }}
+              onUpdatePackage={(upPkg) => {
+                setPackages((prev) => prev.map((p) => (p.id === upPkg.id ? upPkg : p)));
+                showToast(`Package updated!`, 'success');
+              }}
+              onDeletePackage={(id) => {
+                setPackages((prev) => prev.filter((p) => p.id !== id));
+                showToast('Package deleted', 'info');
+              }}
+            />
+          )}
+
+          {currentTab === 'customers' && (
+            <CustomersView
+              customers={customers}
+              orders={orders}
+              accounts={accounts}
+              onAddCustomer={(c) => {
+                setCustomers((prev) => [c, ...prev]);
+                showToast(`Customer "${c.name}" registered!`, 'success');
+              }}
+              onRecordCustomerPayment={handleRecordCustomerPayment}
+            />
+          )}
+
+          {currentTab === 'suppliers' && (
+            <SuppliersView
+              suppliers={suppliers}
+              purchases={purchases}
+              accounts={accounts}
+              onAddSupplier={(s) => {
+                setSuppliers((prev) => [s, ...prev]);
+                showToast(`Supplier "${s.companyName}" registered!`, 'success');
+              }}
+              onUpdateSupplier={(s) => {
+                setSuppliers((prev) => prev.map((sup) => (sup.id === s.id ? s : sup)));
+                showToast(`Supplier updated!`, 'success');
+              }}
+              onRecordSupplierPayment={handleRecordSupplierPayment}
+            />
+          )}
+
+          {currentTab === 'expenses' && (
+            <ExpensesView
+              expenses={expenses}
+              accounts={accounts}
+              onAddExpense={handleAddExpense}
+              onDeleteExpense={(id) => {
+                setExpenses((prev) => prev.filter((e) => e.id !== id));
+                showToast('Expense record deleted', 'info');
+              }}
+            />
+          )}
+
+          {currentTab === 'accounts' && (
+            <AccountsView
+              accounts={accounts}
+              transactions={transactions}
+              onAddAccount={(acc) => {
+                setAccounts((prev) => [...prev, acc]);
+                showToast(`Account "${acc.name}" added!`, 'success');
+              }}
+              onTransferFunds={handleTransferFunds}
+              onAdjustBalance={handleAdjustBalance}
+              onDeleteTransaction={(txId) => {
+                setTransactions((prev) => prev.filter((t) => t.id !== txId));
+                showToast('Transaction record deleted from ledger', 'info');
+              }}
+              onDeleteAccount={(accId) => {
+                if (accounts.length <= 1) {
+                  showToast('Cannot delete the last remaining account', 'error');
+                  return;
+                }
+                setAccounts((prev) => prev.filter((a) => a.id !== accId));
+                setTransactions((prev) => prev.filter((t) => t.accountId !== accId));
+                showToast('Account removed', 'info');
+              }}
+            />
+          )}
+
+          {currentTab === 'profit-loss' && (
+            <ProfitLossView
+              orders={orders}
+              expenses={expenses}
+              products={products}
+              returns={returns}
+            />
+          )}
+
+          {currentTab === 'returns' && (
+            <ReturnsView
+              returns={returns}
+              orders={orders}
+              purchases={purchases}
+              products={products}
+              accounts={accounts}
+              onAddReturn={handleAddReturn}
+            />
+          )}
+
+          {currentTab === 'new-order' && (
+            <OrderFormView
+              products={products}
+              settings={settings}
+              packages={packages}
+              initialPackage={selectedPackageForOrder}
+              packagingMaterials={packagingMaterials}
+              onSaveOrder={handleSaveOrder}
+              onAddNewProduct={(p) => setProducts((prev) => [p, ...prev])}
+              onQuickAddPackagingMaterial={handleAddPackagingMaterial}
+              onCancel={() => {
+                setSelectedPackageForOrder(null);
+                setCurrentTab('dashboard');
+              }}
+            />
+          )}
+        </main>
+      </div>
+
+      {/* Purchase Invoice Creation Modal */}
+      <PurchaseModal
+        isOpen={isNewPurchaseModalOpen}
+        onClose={() => setIsNewPurchaseModalOpen(false)}
+        products={products}
+        suppliers={suppliers}
+        accounts={accounts}
+        onSavePurchase={handleSavePurchase}
+      />
+
+      {/* Invoice & Packing Slip Modal */}
       <OrderInvoiceModal
         order={selectedOrderForInvoice}
         settings={settings}
@@ -551,19 +1252,71 @@ export default function App() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        initialTab={settingsModalTab}
         settings={settings}
-        onSaveSettings={(newSettings) => {
-          setSettings(newSettings);
-          showToast('Settings saved!');
+        onSaveSettings={(s) => {
+          setSettings(s);
+          showToast('Settings saved!', 'success');
         }}
-        courierConfig={courierConfig}
-        onSaveCourierConfig={(newConfig) => {
-          setCourierConfig(newConfig);
-          showToast('Courier API settings saved!', 'success');
+        onResetAllData={() => {
+          if (confirm('Reset all demo data back to factory defaults?')) {
+            const fresh = resetAllData();
+            setProducts(fresh.products);
+            setSuppliers(fresh.suppliers);
+            setCustomers(fresh.customers);
+            setPurchases(fresh.purchases);
+            setOrders(fresh.orders);
+            setExpenses(fresh.expenses);
+            setAccounts(fresh.accounts);
+            setTransactions(fresh.transactions);
+            setStockLedger(fresh.stockLedger);
+            setReturns(fresh.returns);
+            setPackages(fresh.packages);
+            setSettings(fresh.settings);
+            showToast('Factory demo data restored!', 'info');
+          }
         }}
-        onResetData={handleResetData}
-        onImportData={handleImportData}
+        onClearTransactions={() => {
+          if (
+            confirm(
+              'Clear all orders, purchases, expenses, and returns to start fresh? (Catalog products and settings will be preserved)'
+            )
+          ) {
+            setOrders([]);
+            setPurchases([]);
+            setExpenses([]);
+            setReturns([]);
+            setTransactions([]);
+            setStockLedger([]);
+            setCustomers((prev) =>
+              prev.map((c) => ({
+                ...c,
+                totalOrders: 0,
+                totalPurchases: 0,
+                amountPaid: 0,
+                outstandingDue: 0,
+              }))
+            );
+            setSuppliers((prev) =>
+              prev.map((s) => ({
+                ...s,
+                totalPurchases: 0,
+                totalPaid: 0,
+                outstandingBalance: s.openingBalance,
+              }))
+            );
+            showToast('All transaction records cleared! Dashboard is now 0 dues & 0 sales.', 'info');
+          }
+        }}
+        onExportData={() => {
+          const jsonStr = exportAllData();
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `backup_${settings.shopName.replace(/\s+/g, '_')}_${getTodayString()}.json`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }}
       />
     </div>
   );
