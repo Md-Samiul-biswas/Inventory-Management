@@ -20,6 +20,7 @@ interface PackagesViewProps {
   packages: SavedPackage[];
   products: ProductItem[];
   onSavePackage: (pkg: SavedPackage) => void;
+  onUpdatePackage?: (pkg: SavedPackage) => void;
   onDeletePackage: (pkgId: string) => void;
   onSelectPackageForOrder: (pkg: SavedPackage) => void;
 }

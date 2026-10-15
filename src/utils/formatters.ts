@@ -12,6 +12,12 @@ export function formatPercent(value: number): string {
 }
 
 export const STATUS_MAP: Record<OrderStatus, { label: string; bg: string; text: string; border: string }> = {
+  draft: {
+    label: 'Draft',
+    bg: 'bg-neutral-100',
+    text: 'text-neutral-700',
+    border: 'border-neutral-200',
+  },
   pending: {
     label: 'Pending',
     bg: 'bg-amber-50',
@@ -26,6 +32,12 @@ export const STATUS_MAP: Record<OrderStatus, { label: string; bg: string; text: 
   },
   packaging: {
     label: 'Packaging',
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-800',
+    border: 'border-indigo-200',
+  },
+  processing: {
+    label: 'Processing',
     bg: 'bg-indigo-50',
     text: 'text-indigo-800',
     border: 'border-indigo-200',
@@ -48,11 +60,18 @@ export const STATUS_MAP: Record<OrderStatus, { label: string; bg: string; text: 
     text: 'text-rose-800',
     border: 'border-rose-200',
   },
+  returned: {
+    label: 'Returned',
+    bg: 'bg-orange-50',
+    text: 'text-orange-800',
+    border: 'border-orange-200',
+  },
 };
 
 export const PAYMENT_STATUS_MAP: Record<PaymentStatus, { label: string; text: string }> = {
   paid: { label: 'Paid', text: 'text-emerald-700' },
   partial: { label: 'Partial', text: 'text-amber-700' },
   unpaid: { label: 'Unpaid', text: 'text-rose-700' },
+  refunded: { label: 'Refunded', text: 'text-purple-700' },
   cod: { label: 'COD', text: 'text-blue-700' },
 };

@@ -16,20 +16,31 @@ import {
   X,
   RotateCcw,
 } from 'lucide-react';
-import { ProductItem, Order, PackageOrderItem, AppSettings, SavedPackage } from '../types';
+import {
+  ProductItem,
+  Order,
+  PackageOrderItem,
+  AppSettings,
+  SavedPackage,
+  PackagingMaterial,
+  SelectedPackagingItem,
+} from '../types';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import { QuickAddProductModal } from './QuickAddProductModal';
 import { AddItemModal } from './AddItemModal';
 import { EditItemModal } from './EditItemModal';
 import { SelectPackageModal } from './SelectPackageModal';
+import { PackagingMaterialsModal } from './PackagingMaterialsModal';
 
 interface OrderFormViewProps {
   products: ProductItem[];
   settings: AppSettings;
   packages?: SavedPackage[];
   initialPackage?: SavedPackage | null;
+  packagingMaterials?: PackagingMaterial[];
   onSaveOrder: (newOrder: Order, shouldDeductStock: boolean) => void;
   onAddNewProduct: (newProduct: ProductItem) => void;
+  onQuickAddPackagingMaterial?: (newMaterial: PackagingMaterial) => void;
   onCancel: () => void;
 }
 
@@ -49,8 +60,10 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
   settings,
   packages = [],
   initialPackage = null,
+  packagingMaterials = [],
   onSaveOrder,
   onAddNewProduct,
+  onQuickAddPackagingMaterial,
   onCancel,
 }) => {
   // Selected package tracking (null means Custom default)
@@ -85,18 +98,18 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
   // Package picker modal
   const [isPackagePickerOpen, setIsPackagePickerOpen] = useState(false);
 
-  // Cost, Fulfillment & Discount
-  const [deliveryCost, setDeliveryCost] = useState<number | ''>(settings.defaultDeliveryCharge);
-  const [packagingCost, setPackagingCost] = useState<number | ''>(settings.defaultPackagingCharge);
+  // Packaging Materials Breakdown modal
+  const [isPackagingModalOpen, setIsPackagingModalOpen] = useState(false);
+  const [selectedPackagingItems, setSelectedPackagingItems] = useState<SelectedPackagingItem[]>([]);
+
+  // Cost, Fulfillment & Discount - Start at 0 per user instruction (not added by default)
+  const [deliveryCost, setDeliveryCost] = useState<number | ''>(0);
+  const [packagingCost, setPackagingCost] = useState<number | ''>(0);
   const [discount, setDiscount] = useState<number | ''>(0);
   const [showDeliveryInput, setShowDeliveryInput] = useState(false);
   const [showPackagingInput, setShowPackagingInput] = useState(false);
-  const [tempDeliveryCost, setTempDeliveryCost] = useState<string>(
-    settings.defaultDeliveryCharge ? String(settings.defaultDeliveryCharge) : ''
-  );
-  const [tempPackagingCost, setTempPackagingCost] = useState<string>(
-    settings.defaultPackagingCharge ? String(settings.defaultPackagingCharge) : ''
-  );
+  const [tempDeliveryCost, setTempDeliveryCost] = useState<string>('');
+  const [tempPackagingCost, setTempPackagingCost] = useState<string>('');
   const [notes, setNotes] = useState('');
 
   // Add Item Modal state
@@ -188,10 +201,10 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
     setSelectedPackageId(null);
     setPackageTitle('');
     setRows([]);
-    setDeliveryCost(settings.defaultDeliveryCharge);
-    setPackagingCost(settings.defaultPackagingCharge);
-    setTempDeliveryCost(settings.defaultDeliveryCharge ? String(settings.defaultDeliveryCharge) : '');
-    setTempPackagingCost(settings.defaultPackagingCharge ? String(settings.defaultPackagingCharge) : '');
+    setDeliveryCost(0);
+    setPackagingCost(0);
+    setTempDeliveryCost('');
+    setTempPackagingCost('');
     setShowDeliveryInput(false);
     setShowPackagingInput(false);
   };
@@ -243,15 +256,18 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
   const numPackaging = Number(packagingCost) || 0;
   const numDiscount = Number(discount) || 0;
 
-  // Auto-calculated Total Customer Selling Price
-  const totalSellingPrice = Math.max(0, totalItemsSellingPrice + numDelivery + numPackaging - numDiscount);
+  // Auto-calculated Total Customer Selling Price (Items + Delivery - Discount)
+  const totalSellingPrice = Math.max(0, totalItemsSellingPrice + numDelivery - numDiscount);
 
-  // Backend Cost
+  // Backend Total Cost (Products Purchase Cost + Delivery Charge + Packing Cost)
   const totalCost = totalProductCost + numDelivery + numPackaging;
 
-  // Net Profit
+  // Net Profit = Total Price (520) - Product Cost (190) - Delivery Charge (120) - Packing Cost (50) = 160
   const netProfit = totalSellingPrice - totalCost;
-  const profitMargin = totalSellingPrice > 0 ? (netProfit / totalSellingPrice) * 100 : 0;
+  const profitMargin =
+    totalItemsSellingPrice - numDiscount > 0
+      ? (netProfit / (totalItemsSellingPrice - numDiscount)) * 100
+      : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,10 +279,6 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
     }
     if (!customerPhone.trim()) {
       setFormError('Please enter phone number');
-      return;
-    }
-    if (!customerAddress.trim()) {
-      setFormError('Please enter delivery address');
       return;
     }
     if (rows.length === 0) {
@@ -304,26 +316,40 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
       };
     });
 
+    const subtotalVal = orderItems.reduce(
+      (sum, it) => sum + (it.suggestedPrice || it.unitCost) * it.quantity,
+      0
+    );
+    const totalAmountVal = Math.max(0, subtotalVal - numDiscount + numDelivery);
+
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       orderNumber: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
-      customerAddress: customerAddress.trim() || 'Not specified',
+      customerAddress: customerAddress.trim() || 'Dhaka, Bangladesh',
       packageTitle: packageTitle.trim() || 'Custom Package',
       items: orderItems,
-      totalProductCost,
-      transportCost: numDelivery,
+      subtotal: subtotalVal,
+      orderDiscount: numDiscount,
+      deliveryFeeCharged: numDelivery,
       packagingCost: numPackaging,
-      miscCost: 0,
-      totalCost,
-      sellingPrice: totalSellingPrice,
-      discount: numDiscount,
+      stickerCost: 0,
+      courierCost: numDelivery,
+      otherOrderExpenses: 0,
+      totalAmount: totalAmountVal,
+      paidAmount: 0,
+      dueAmount: totalAmountVal,
+      totalProductCost,
+      totalDirectCosts: numPackaging,
+      grossProfit: Math.max(0, subtotalVal - numDiscount - totalProductCost),
+      contributionProfit: netProfit,
       netProfit,
       profitMargin,
+      packagingItems: selectedPackagingItems.length > 0 ? selectedPackagingItems : undefined,
       status: 'pending',
-      paymentStatus: 'cod',
-      paidAmount: 0,
+      paymentStatus: 'unpaid',
+      paymentMethod: 'Cash on Delivery',
       isStockDeducted: true,
       orderDate: new Date().toISOString().split('T')[0],
       notes: notes.trim(),
@@ -402,20 +428,6 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-neutral-700 mb-1">
-                Customer Address / ডেলিভারি ঠিকানা <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                rows={2}
-                required
-                placeholder="e.g. বাড়ি নং ১২, রোড নং ৪, ধানমন্ডি, ঢাকা"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-              />
-            </div>
-
-            <div>
               <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1.5">
                 <div className="flex items-center gap-2">
                   <label className="block text-[11px] font-bold text-neutral-700">
@@ -455,7 +467,7 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
                       title="Load items from a saved package"
                     >
                       <Package className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Select Package ({packages.length})</span>
+                      <span>Select Package</span>
                     </button>
                   )}
                 </div>
@@ -525,7 +537,7 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
                     type="button"
                     onClick={() => setIsPackagePickerOpen(true)}
                     className="p-1.5 text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors cursor-pointer"
-                    title={`Select Ready Package (${packages.length} available)`}
+                    title="Select Ready Package"
                   >
                     <Package className="w-4 h-4" />
                   </button>
@@ -556,9 +568,16 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setShowDeliveryInput(!showDeliveryInput);
-                    if (!showDeliveryInput && deliveryCost !== '') {
-                      setTempDeliveryCost(String(deliveryCost));
+                    const willOpen = !showDeliveryInput;
+                    setShowDeliveryInput(willOpen);
+                    if (willOpen) {
+                      setTempDeliveryCost(
+                        Number(deliveryCost) > 0
+                          ? String(deliveryCost)
+                          : settings.defaultDeliveryCharge
+                          ? String(settings.defaultDeliveryCharge)
+                          : '120'
+                      );
                     }
                   }}
                   className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
@@ -573,23 +592,18 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
                   <Truck className="w-4 h-4" />
                 </button>
 
-                {/* Packaging */}
+                {/* Packaging Materials Selection Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowPackagingInput(!showPackagingInput);
-                    if (!showPackagingInput && packagingCost !== '') {
-                      setTempPackagingCost(String(packagingCost));
-                    }
-                  }}
-                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  onClick={() => setIsPackagingModalOpen(true)}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1 ${
                     Number(packagingCost) > 0
                       ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                      : showPackagingInput
+                      : isPackagingModalOpen
                       ? 'bg-amber-100 text-amber-900 border-amber-300'
                       : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
                   }`}
-                  title={`Packing (${Number(packagingCost) > 0 ? formatCurrency(Number(packagingCost)) : 'Add'})`}
+                  title={`প্যাকেজিং সরঞ্জাম ও খরচ (${Number(packagingCost) > 0 ? formatCurrency(Number(packagingCost)) : 'Select Materials'})`}
                 >
                   <Box className="w-4 h-4" />
                 </button>
@@ -835,11 +849,26 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
                     <Box className="w-3.5 h-3.5 text-amber-600" />
                     <span>Packing: {formatCurrency(Number(packagingCost))}</span>
+                    {selectedPackagingItems.length > 0 && (
+                      <span className="text-[10px] text-amber-700 bg-amber-100/70 px-1.5 py-0.5 rounded font-normal">
+                        {selectedPackagingItems
+                          .map((it) => `${it.quantity}x ${it.materialName.split('(')[0].trim()}`)
+                          .join(', ')}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsPackagingModalOpen(true)}
+                      className="ml-1 text-[11px] text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer"
+                      title="Edit selected materials"
+                    >
+                      Edit
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
                         setPackagingCost(0);
-                        setTempPackagingCost('');
+                        setSelectedPackagingItems([]);
                       }}
                       className="ml-1 text-amber-400 hover:text-rose-600 cursor-pointer"
                       title="Remove Packing"
@@ -893,17 +922,6 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
                   </div>
                 )}
 
-                {numPackaging > 0 && (
-                  <div className="flex justify-between text-neutral-600">
-                    <span className="flex items-center gap-1 text-amber-700">
-                      <Box className="w-3.5 h-3.5" /> Packing:
-                    </span>
-                    <span className="font-mono font-semibold text-neutral-900">
-                      +{formatCurrency(numPackaging)}
-                    </span>
-                  </div>
-                )}
-
                 {/* Discount */}
                 <div className="flex justify-between items-center text-xs pt-1.5 border-t border-emerald-200/60">
                   <span className="text-neutral-700 font-medium flex items-center gap-1">
@@ -936,29 +954,52 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
               </div>
             </div>
 
-            {/* Cost Breakdown */}
+            {/* Backend Cost Breakdown */}
             <div className="bg-neutral-50 rounded-xl p-3.5 space-y-2 text-xs border border-neutral-200/80">
               <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
                 Backend Cost & Profit
               </div>
+
+              {/* Total Price (520) */}
+              <div className="flex justify-between text-neutral-800 font-semibold pb-1.5 border-b border-neutral-200/70">
+                <span>Total Price:</span>
+                <span className="font-bold font-mono text-neutral-900">
+                  {formatCurrency(totalSellingPrice)}
+                </span>
+              </div>
+
+              {/* Products Purchase Cost (minus hobe) */}
               <div className="flex justify-between text-neutral-600">
                 <span>Products Purchase Cost:</span>
-                <span className="font-bold text-neutral-900 font-mono">
-                  {formatCurrency(totalProductCost)}
+                <span className="font-semibold text-rose-600 font-mono">
+                  -{formatCurrency(totalProductCost)}
                 </span>
               </div>
-              <div className="flex justify-between text-neutral-600">
-                <span>D.Charge:</span>
-                <span className="font-bold text-neutral-900 font-mono">
-                  {formatCurrency(numDelivery)}
-                </span>
-              </div>
-              <div className="flex justify-between text-neutral-600">
-                <span>Packing Cost:</span>
-                <span className="font-bold text-neutral-900 font-mono">
-                  {formatCurrency(numPackaging)}
-                </span>
-              </div>
+
+              {/* Delivery Charge (minus hobe) */}
+              {numDelivery > 0 && (
+                <div className="flex justify-between text-neutral-600">
+                  <span className="flex items-center gap-1">
+                    <Truck className="w-3.5 h-3.5 text-blue-600" /> Delivery Charge:
+                  </span>
+                  <span className="font-semibold text-rose-600 font-mono">
+                    -{formatCurrency(numDelivery)}
+                  </span>
+                </div>
+              )}
+
+              {/* Packing Cost (minus hobe) */}
+              {numPackaging > 0 && (
+                <div className="flex justify-between text-neutral-600">
+                  <span className="flex items-center gap-1 text-amber-900">
+                    <Box className="w-3.5 h-3.5 text-amber-600" /> Packing Cost:
+                  </span>
+                  <span className="font-semibold text-rose-600 font-mono">
+                    -{formatCurrency(numPackaging)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between border-t border-neutral-200 pt-2 text-neutral-900 font-bold text-sm">
                 <span>Total Cost:</span>
                 <span className="font-mono text-neutral-900">
@@ -1058,6 +1099,20 @@ export const OrderFormView: React.FC<OrderFormViewProps> = ({
         currentPackageId={selectedPackageId}
         onSelectPackage={handleApplyPackage}
         onSelectCustom={handleResetToCustom}
+      />
+
+      {/* Packaging Materials Selection Modal */}
+      <PackagingMaterialsModal
+        isOpen={isPackagingModalOpen}
+        onClose={() => setIsPackagingModalOpen(false)}
+        materials={packagingMaterials}
+        initialSelectedItems={selectedPackagingItems}
+        currentManualCost={packagingCost}
+        onApply={(items, finalCost) => {
+          setSelectedPackagingItems(items);
+          setPackagingCost(finalCost);
+        }}
+        onQuickAddMaterial={onQuickAddPackagingMaterial}
       />
     </div>
   );

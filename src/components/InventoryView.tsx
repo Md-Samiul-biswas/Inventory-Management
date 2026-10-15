@@ -116,12 +116,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       const newProd: ProductItem = {
         id: `prod-${Date.now()}`,
         name: name.trim(),
-        category: category.trim() || 'সাধারণ',
+        sku: `SKU-${Date.now().toString().slice(-4)}`,
+        category: category.trim() || 'General',
         unitCost: cost,
         suggestedSellingPrice: sell,
         stock: Number(stock) || 0,
+        reservedStock: 0,
         minStockAlert: 5,
-        unit: unit.trim() || 'পিস',
+        isActive: true,
+        unit: unit.trim() || 'pcs',
         createdAt: new Date().toISOString().split('T')[0],
       };
       onAddProduct(newProd);

@@ -120,9 +120,6 @@ export const SelectPackageModal: React.FC<SelectPackageModalProps> = ({
                       <span className="font-bold text-xs text-neutral-900 group-hover:text-purple-900 transition-colors">
                         {pkg.name}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold shrink-0">
-                        {pkg.items.length} items
-                      </span>
                       {isCurrent && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white font-bold shrink-0">
                           Active
@@ -155,7 +152,7 @@ export const SelectPackageModal: React.FC<SelectPackageModalProps> = ({
                       })}
                       {pkg.items.length > 4 && (
                         <span className="text-[10px] text-neutral-400 font-bold">
-                          +{pkg.items.length - 4} more
+                          & more
                         </span>
                       )}
                     </div>
@@ -269,7 +266,7 @@ export const SelectPackageModal: React.FC<SelectPackageModalProps> = ({
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/60 flex items-center justify-between text-xs text-neutral-500">
-          <span>{filtered.length} packages available + Custom (Default)</span>
+          <span>Ready Packages + Custom Order</span>
           <button
             type="button"
             onClick={onClose}

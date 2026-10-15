@@ -1,338 +1,180 @@
-import { ProductItem, Order, AppSettings, ExpenseItem, SavedPackage, KeepNote, CourierShipment, CourierApiConfig } from '../types';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_SETTINGS, INITIAL_EXPENSES, INITIAL_PACKAGES } from '../data/initialData';
+import {
+  ProductItem,
+  Supplier,
+  Customer,
+  Purchase,
+  Order,
+  ExpenseItem,
+  FinancialAccount,
+  AccountTransaction,
+  StockLedgerEntry,
+  ReturnRecord,
+  SavedPackage,
+  AppSettings,
+  CourierParcel,
+  CourierApiSettings,
+  PackagingMaterial,
+} from '../types';
+import {
+  INITIAL_PRODUCTS,
+  INITIAL_SUPPLIERS,
+  INITIAL_CUSTOMERS,
+  INITIAL_PURCHASES,
+  INITIAL_ORDERS,
+  INITIAL_EXPENSES,
+  INITIAL_FINANCIAL_ACCOUNTS,
+  INITIAL_ACCOUNT_TRANSACTIONS,
+  INITIAL_STOCK_LEDGER,
+  INITIAL_RETURNS,
+  INITIAL_PACKAGES,
+  INITIAL_SETTINGS,
+  INITIAL_PARCELS,
+  INITIAL_COURIER_SETTINGS,
+  INITIAL_PACKAGING_MATERIALS,
+} from '../data/initialData';
 
-const PRODUCTS_KEY = 'packagecraft_products_v2';
-const ORDERS_KEY = 'packagecraft_orders_v2';
-const SETTINGS_KEY = 'packagecraft_settings_v2';
-const EXPENSES_KEY = 'packagecraft_expenses_v2';
-const PACKAGES_KEY = 'packagecraft_packages_v2';
-const NOTES_KEY = 'packagecraft_notes_v2';
+const V = 'biz_v5_clean_';
+const PRODUCTS_KEY = `${V}products`;
+const SUPPLIERS_KEY = `${V}suppliers`;
+const CUSTOMERS_KEY = `${V}customers`;
+const PURCHASES_KEY = `${V}purchases`;
+const ORDERS_KEY = `${V}orders`;
+const EXPENSES_KEY = `${V}expenses`;
+const ACCOUNTS_KEY = `${V}accounts`;
+const TRANSACTIONS_KEY = `${V}transactions`;
+const STOCK_LEDGER_KEY = `${V}stock_ledger`;
+const RETURNS_KEY = `${V}returns`;
+const PACKAGES_KEY = `${V}packages`;
+const SETTINGS_KEY = `${V}settings`;
+const PARCELS_KEY = `${V}parcels`;
+const COURIER_SETTINGS_KEY = `${V}courier_settings`;
+const PACKAGING_MATERIALS_KEY = `${V}packaging_materials`;
 
-export const INITIAL_NOTES: KeepNote[] = [
-  {
-    id: 'note-1',
-    title: 'প্যাকেজিং ও ডেলিভারি চেকলিস্ট',
-    content: '',
-    type: 'checklist',
-    items: [
-      { id: 'item-1', text: 'কাস্টম বাবল র‍্যাপ ও টেপ স্টক চেক', completed: true },
-      { id: 'item-2', text: 'প্রিন্ট করা ইনভয়েস ভেরিফিকেশন', completed: true },
-      { id: 'item-3', text: 'ডেলিভারি কুরিয়ার পিকআপ কনফার্মেশন', completed: false },
-      { id: 'item-4', text: 'কাস্টমারকে ট্র্যাকিং আইডি এসএমএস পাঠানো', completed: false }
-    ],
-    color: 'amber',
-    isPinned: true,
-    category: 'orders',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'note-2',
-    title: 'সাপ্লায়ার অর্ডার রিমাইন্ডার (Keep নোট)',
-    content: 'পরবর্তী সপ্তাহের জন্য সুতা এবং প্রিমিয়াম গিফট বক্স পাইকারি মার্কেট থেকে রিস্টক করতে হবে। ন্যূনতম ২০০ পিস এর ডিসকাউন্ট রেট যাচাই করুন।',
-    type: 'note',
-    color: 'emerald',
-    isPinned: false,
-    category: 'supplier',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
-export function loadNotes(): KeepNote[] {
+function getStored<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(NOTES_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) {
-      localStorage.setItem(NOTES_KEY, JSON.stringify(INITIAL_NOTES));
-      return INITIAL_NOTES;
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
     }
     return JSON.parse(raw);
   } catch (e) {
-    return INITIAL_NOTES;
+    console.error(`Failed to load ${key}:`, e);
+    return fallback;
   }
 }
 
-export function saveNotes(notes: KeepNote[]): void {
+function setStored<T>(key: string, data: T): void {
   try {
-    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+    localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
-    console.error(e);
+    console.error(`Failed to save ${key}:`, e);
   }
 }
 
-const COURIER_SHIPMENTS_KEY = 'packagecraft_courier_shipments_v1';
-const COURIER_CONFIG_KEY = 'packagecraft_courier_config_v1';
+export const loadProducts = (): ProductItem[] => getStored(PRODUCTS_KEY, INITIAL_PRODUCTS);
+export const saveProducts = (d: ProductItem[]) => setStored(PRODUCTS_KEY, d);
 
-export const DEFAULT_COURIER_CONFIG: CourierApiConfig = {
-  defaultCourier: 'pathao',
-  pathao: {
-    enabled: true,
-    clientId: 'pth_live_budgetchoice_01',
-    clientSecret: 'pth_sec_live_bcbd99281',
-    username: 'budgetchoicebd@gmail.com',
-    storeId: 'BCBD-STORE-01',
-    storeName: 'Budget Choice BD',
-    sandbox: false,
-  },
-  steadfast: {
-    enabled: true,
-    apiKey: 'stf_api_key_8849201',
-    secretKey: 'stf_sec_8849201',
-  },
-  redx: {
-    enabled: false,
-    apiToken: '',
-  },
-};
+export const loadSuppliers = (): Supplier[] => getStored(SUPPLIERS_KEY, INITIAL_SUPPLIERS);
+export const saveSuppliers = (d: Supplier[]) => setStored(SUPPLIERS_KEY, d);
 
-export const INITIAL_COURIER_SHIPMENTS: CourierShipment[] = [
-  {
-    id: 'ship-101',
-    orderId: 'ord-1',
-    orderNumber: 'ORD-1001',
-    consignmentId: 'PTH-829104',
-    trackingCode: 'PTH829104',
-    courier: 'pathao',
-    customerName: 'Rahim Ahmed',
-    customerPhone: '01711223344',
-    customerAddress: 'House 14, Road 5, Dhanmondi, Dhaka',
-    recipientCity: 'Dhaka',
-    recipientZone: 'Dhanmondi',
-    codAmount: 0,
-    deliveryCharge: 80,
-    weightKg: 0.5,
-    itemType: 'parcel',
-    instruction: 'Handle with care (Gift items inside)',
-    status: 'in_transit',
-    statusNote: 'Rider assigned, parcel on the way',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-  },
-  {
-    id: 'ship-102',
-    orderId: 'ord-2',
-    orderNumber: 'ORD-1002',
-    consignmentId: 'STF-583921',
-    trackingCode: 'STF583921',
-    courier: 'steadfast',
-    customerName: 'Nusrat Jahan',
-    customerPhone: '01988776655',
-    customerAddress: 'Agrabad C/A, Chittagong',
-    recipientCity: 'Chittagong',
-    recipientZone: 'Agrabad',
-    codAmount: 850,
-    deliveryCharge: 130,
-    weightKg: 1.2,
-    itemType: 'box',
-    instruction: 'Call customer before delivery',
-    status: 'delivered',
-    statusNote: 'Delivered successfully, COD collected',
-    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-  },
-];
+export const loadCustomers = (): Customer[] => getStored(CUSTOMERS_KEY, INITIAL_CUSTOMERS);
+export const saveCustomers = (d: Customer[]) => setStored(CUSTOMERS_KEY, d);
 
-export function loadCourierShipments(): CourierShipment[] {
-  try {
-    const raw = localStorage.getItem(COURIER_SHIPMENTS_KEY);
-    if (!raw) {
-      localStorage.setItem(COURIER_SHIPMENTS_KEY, JSON.stringify(INITIAL_COURIER_SHIPMENTS));
-      return INITIAL_COURIER_SHIPMENTS;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    return INITIAL_COURIER_SHIPMENTS;
-  }
-}
+export const loadPurchases = (): Purchase[] => getStored(PURCHASES_KEY, INITIAL_PURCHASES);
+export const savePurchases = (d: Purchase[]) => setStored(PURCHASES_KEY, d);
 
-export function saveCourierShipments(shipments: CourierShipment[]): void {
-  try {
-    localStorage.setItem(COURIER_SHIPMENTS_KEY, JSON.stringify(shipments));
-  } catch (e) {
-    console.error(e);
-  }
-}
+export const loadOrders = (): Order[] => getStored(ORDERS_KEY, INITIAL_ORDERS);
+export const saveOrders = (d: Order[]) => setStored(ORDERS_KEY, d);
 
-export function loadCourierConfig(): CourierApiConfig {
-  try {
-    const raw = localStorage.getItem(COURIER_CONFIG_KEY);
-    if (!raw) {
-      localStorage.setItem(COURIER_CONFIG_KEY, JSON.stringify(DEFAULT_COURIER_CONFIG));
-      return DEFAULT_COURIER_CONFIG;
-    }
-    const parsed = JSON.parse(raw);
-    const merged: CourierApiConfig = {
-      ...DEFAULT_COURIER_CONFIG,
-      ...parsed,
-      pathao: {
-        ...DEFAULT_COURIER_CONFIG.pathao,
-        ...(parsed.pathao || {}),
-        storeName: parsed.pathao?.storeName || 'Budget Choice BD',
-        username: (!parsed.pathao?.username || parsed.pathao?.username === 'merchant@store.com')
-          ? 'budgetchoicebd@gmail.com'
-          : parsed.pathao.username,
-        storeId: (!parsed.pathao?.storeId || parsed.pathao?.storeId === 'STORE-8812')
-          ? 'BCBD-STORE-01'
-          : parsed.pathao.storeId,
-        clientId: (!parsed.pathao?.clientId || parsed.pathao?.clientId === 'demo_client_pth_9941')
-          ? 'pth_live_budgetchoice_01'
-          : parsed.pathao.clientId,
-        clientSecret: (!parsed.pathao?.clientSecret || parsed.pathao?.clientSecret === 'pth_sec_live_99218204')
-          ? 'pth_sec_live_bcbd99281'
-          : parsed.pathao.clientSecret,
-      },
-    };
-    return merged;
-  } catch (e) {
-    return DEFAULT_COURIER_CONFIG;
-  }
-}
+export const loadExpenses = (): ExpenseItem[] => getStored(EXPENSES_KEY, INITIAL_EXPENSES);
+export const saveExpenses = (d: ExpenseItem[]) => setStored(EXPENSES_KEY, d);
 
-export function saveCourierConfig(config: CourierApiConfig): void {
-  try {
-    localStorage.setItem(COURIER_CONFIG_KEY, JSON.stringify(config));
-  } catch (e) {
-    console.error(e);
-  }
-}
+export const loadAccounts = (): FinancialAccount[] =>
+  getStored(ACCOUNTS_KEY, INITIAL_FINANCIAL_ACCOUNTS);
+export const saveAccounts = (d: FinancialAccount[]) => setStored(ACCOUNTS_KEY, d);
 
+export const loadTransactions = (): AccountTransaction[] =>
+  getStored(TRANSACTIONS_KEY, INITIAL_ACCOUNT_TRANSACTIONS);
+export const saveTransactions = (d: AccountTransaction[]) => setStored(TRANSACTIONS_KEY, d);
 
+export const loadStockLedger = (): StockLedgerEntry[] =>
+  getStored(STOCK_LEDGER_KEY, INITIAL_STOCK_LEDGER);
+export const saveStockLedger = (d: StockLedgerEntry[]) => setStored(STOCK_LEDGER_KEY, d);
 
-export function loadProducts(): ProductItem[] {
-  try {
-    const raw = localStorage.getItem(PRODUCTS_KEY);
-    if (!raw) {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(INITIAL_PRODUCTS));
-      return INITIAL_PRODUCTS;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    return INITIAL_PRODUCTS;
-  }
-}
+export const loadReturns = (): ReturnRecord[] => getStored(RETURNS_KEY, INITIAL_RETURNS);
+export const saveReturns = (d: ReturnRecord[]) => setStored(RETURNS_KEY, d);
 
-export function saveProducts(products: ProductItem[]): void {
-  try {
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
-  } catch (e) {
-    console.error(e);
-  }
-}
+export const loadPackages = (): SavedPackage[] => getStored(PACKAGES_KEY, INITIAL_PACKAGES);
+export const savePackages = (d: SavedPackage[]) => setStored(PACKAGES_KEY, d);
 
-export function loadPackages(): SavedPackage[] {
-  try {
-    const raw = localStorage.getItem(PACKAGES_KEY);
-    if (!raw) {
-      localStorage.setItem(PACKAGES_KEY, JSON.stringify(INITIAL_PACKAGES));
-      return INITIAL_PACKAGES;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    return INITIAL_PACKAGES;
-  }
-}
+export const loadSettings = (): AppSettings => getStored(SETTINGS_KEY, INITIAL_SETTINGS);
+export const saveSettings = (d: AppSettings) => setStored(SETTINGS_KEY, d);
 
-export function savePackages(packages: SavedPackage[]): void {
-  try {
-    localStorage.setItem(PACKAGES_KEY, JSON.stringify(packages));
-  } catch (e) {
-    console.error(e);
-  }
-}
+export const loadParcels = (): CourierParcel[] => getStored(PARCELS_KEY, INITIAL_PARCELS);
+export const saveParcels = (d: CourierParcel[]) => setStored(PARCELS_KEY, d);
 
-export function loadOrders(): Order[] {
-  try {
-    const raw = localStorage.getItem(ORDERS_KEY);
-    if (!raw) {
-      localStorage.setItem(ORDERS_KEY, JSON.stringify(INITIAL_ORDERS));
-      return INITIAL_ORDERS;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    return INITIAL_ORDERS;
-  }
-}
+export const loadCourierSettings = (): CourierApiSettings =>
+  getStored(COURIER_SETTINGS_KEY, INITIAL_COURIER_SETTINGS);
+export const saveCourierSettings = (d: CourierApiSettings) =>
+  setStored(COURIER_SETTINGS_KEY, d);
 
-export function saveOrders(orders: Order[]): void {
-  try {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  } catch (e) {
-    console.error(e);
-  }
-}
+export const loadPackagingMaterials = (): PackagingMaterial[] =>
+  getStored(PACKAGING_MATERIALS_KEY, INITIAL_PACKAGING_MATERIALS);
+export const savePackagingMaterials = (d: PackagingMaterial[]) =>
+  setStored(PACKAGING_MATERIALS_KEY, d);
 
-export function loadExpenses(): ExpenseItem[] {
-  try {
-    const raw = localStorage.getItem(EXPENSES_KEY);
-    if (!raw) {
-      localStorage.setItem(EXPENSES_KEY, JSON.stringify(INITIAL_EXPENSES));
-      return INITIAL_EXPENSES;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    return INITIAL_EXPENSES;
-  }
-}
-
-export function saveExpenses(expenses: ExpenseItem[]): void {
-  try {
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-export function loadSettings(): AppSettings {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(INITIAL_SETTINGS));
-      return INITIAL_SETTINGS;
-    }
-    return { ...INITIAL_SETTINGS, ...JSON.parse(raw) };
-  } catch (e) {
-    return INITIAL_SETTINGS;
-  }
-}
-
-export function saveSettings(settings: AppSettings): void {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-export function resetAllData(): {
-  products: ProductItem[];
-  orders: Order[];
-  expenses: ExpenseItem[];
-  settings: AppSettings;
-  packages: SavedPackage[];
-} {
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(INITIAL_PRODUCTS));
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(INITIAL_ORDERS));
-  localStorage.setItem(EXPENSES_KEY, JSON.stringify(INITIAL_EXPENSES));
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(INITIAL_SETTINGS));
-  localStorage.setItem(PACKAGES_KEY, JSON.stringify(INITIAL_PACKAGES));
+export function resetAllData() {
+  saveProducts(INITIAL_PRODUCTS);
+  saveSuppliers(INITIAL_SUPPLIERS);
+  saveCustomers(INITIAL_CUSTOMERS);
+  savePurchases(INITIAL_PURCHASES);
+  saveOrders(INITIAL_ORDERS);
+  saveExpenses(INITIAL_EXPENSES);
+  saveAccounts(INITIAL_FINANCIAL_ACCOUNTS);
+  saveTransactions(INITIAL_ACCOUNT_TRANSACTIONS);
+  saveStockLedger(INITIAL_STOCK_LEDGER);
+  saveReturns(INITIAL_RETURNS);
+  savePackages(INITIAL_PACKAGES);
+  saveSettings(INITIAL_SETTINGS);
+  saveParcels(INITIAL_PARCELS);
+  saveCourierSettings(INITIAL_COURIER_SETTINGS);
+  savePackagingMaterials(INITIAL_PACKAGING_MATERIALS);
   return {
     products: INITIAL_PRODUCTS,
+    suppliers: INITIAL_SUPPLIERS,
+    customers: INITIAL_CUSTOMERS,
+    purchases: INITIAL_PURCHASES,
     orders: INITIAL_ORDERS,
     expenses: INITIAL_EXPENSES,
-    settings: INITIAL_SETTINGS,
+    accounts: INITIAL_FINANCIAL_ACCOUNTS,
+    transactions: INITIAL_ACCOUNT_TRANSACTIONS,
+    stockLedger: INITIAL_STOCK_LEDGER,
+    returns: INITIAL_RETURNS,
     packages: INITIAL_PACKAGES,
+    settings: INITIAL_SETTINGS,
+    parcels: INITIAL_PARCELS,
+    courierSettings: INITIAL_COURIER_SETTINGS,
   };
 }
 
 export function exportAllData(): string {
-  const data = {
+  const all = {
     products: loadProducts(),
+    suppliers: loadSuppliers(),
+    customers: loadCustomers(),
+    purchases: loadPurchases(),
     orders: loadOrders(),
-    packages: loadPackages(),
     expenses: loadExpenses(),
+    accounts: loadAccounts(),
+    transactions: loadTransactions(),
+    stockLedger: loadStockLedger(),
+    returns: loadReturns(),
+    packages: loadPackages(),
     settings: loadSettings(),
+    parcels: loadParcels(),
+    courierSettings: loadCourierSettings(),
     exportedAt: new Date().toISOString(),
   };
-  return JSON.stringify(data, null, 2);
+  return JSON.stringify(all, null, 2);
 }
-

@@ -29,7 +29,10 @@ export const InvestmentView: React.FC<InvestmentViewProps> = ({
 
   // Total Capital deployed on fulfilled orders
   const ordersCostCapital = useMemo(() => {
-    return orders.reduce((acc, o) => acc + o.totalCost, 0);
+    return orders.reduce(
+      (acc, o) => acc + (o.totalCost ?? (o.totalProductCost || 0) + (o.totalDirectCosts || 0)),
+      0
+    );
   }, [orders]);
 
   // Other logged business expenses
@@ -42,7 +45,7 @@ export const InvestmentView: React.FC<InvestmentViewProps> = ({
 
   // Total Returns = Total Order Sales
   const totalSalesRevenue = useMemo(() => {
-    return orders.reduce((acc, o) => acc + o.sellingPrice, 0);
+    return orders.reduce((acc, o) => acc + (o.totalAmount ?? o.sellingPrice ?? 0), 0);
   }, [orders]);
 
   // Net Profit realized from sales

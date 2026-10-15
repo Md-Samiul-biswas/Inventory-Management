@@ -5,71 +5,85 @@ import {
   Trash2,
   Calendar,
   DollarSign,
-  TrendingDown,
-  X,
-  Package,
-  Truck,
-  Box,
-  Megaphone,
-  Home,
-  Layers,
+  Search,
+  Filter,
+  Download,
+  Building,
+  CreditCard,
+  FileText,
 } from 'lucide-react';
-import { ExpenseItem, Order } from '../types';
-import { formatCurrency } from '../utils/formatters';
+import { ExpenseItem, FinancialAccount } from '../types';
+import { formatCurrency, formatCompactCurrency, formatDate, getTodayString } from '../utils/accounting';
 
 interface ExpensesViewProps {
   expenses: ExpenseItem[];
-  orders?: Order[];
+  accounts: FinancialAccount[];
   onAddExpense: (expense: ExpenseItem) => void;
   onDeleteExpense: (id: string) => void;
 }
 
+const DEFAULT_CATEGORIES = [
+  'Office Rent',
+  'Salaries',
+  'Advertising',
+  'Internet and Electricity',
+  'Packaging',
+  'Stickers',
+  'Delivery and Courier',
+  'Transport',
+  'Equipment',
+  'Software and Subscriptions',
+  'Other Expenses',
+];
+
 export const ExpensesView: React.FC<ExpensesViewProps> = ({
   expenses,
-  orders = [],
+  accounts,
   onAddExpense,
   onDeleteExpense,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+
+  // Form states
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<ExpenseItem['category']>('Packaging');
+  const [category, setCategory] = useState<string>('Advertising');
+  const [customCategory, setCustomCategory] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [note, setNote] = useState('');
+  const [date, setDate] = useState(getTodayString());
+  const [paymentAccountId, setPaymentAccountId] = useState(accounts[0]?.id || '');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [vendor, setVendor] = useState('');
+  const [description, setDescription] = useState('');
+  const [createdBy, setCreatedBy] = useState('Admin');
+  const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
 
-  // Real logged custom business expenses
-  const totalExpenses = useMemo(() => {
-    return expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  }, [expenses]);
+  const totalExpenseAmount = useMemo(
+    () => expenses.reduce((s, e) => s + (e.amount || 0), 0),
+    [expenses]
+  );
 
-  const currentMonthPrefix = new Date().toISOString().slice(0, 7); // e.g. "2026-10"
-  const thisMonthExpenses = useMemo(() => {
-    return expenses
-      .filter((e) => (e.date || '').startsWith(currentMonthPrefix))
-      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  }, [expenses, currentMonthPrefix]);
-
-  const avgExpensePerEntry = useMemo(() => {
-    if (expenses.length === 0) return 0;
-    return Math.round(totalExpenses / expenses.length);
-  }, [expenses.length, totalExpenses]);
-
-  // Breakdown by logged categories (only calculated when expenses exist)
-  const categoryBreakdown = useMemo(() => {
-    if (expenses.length === 0) return [];
-
-    const map: Record<string, number> = {};
+  const categories = useMemo(() => {
+    const set = new Set<string>(DEFAULT_CATEGORIES);
     expenses.forEach((e) => {
-      const cat = e.category || 'Other';
-      map[cat] = (map[cat] || 0) + (Number(e.amount) || 0);
+      if (e.category) set.add(e.category);
     });
-
-    return Object.entries(map).map(([name, total]) => ({
-      name,
-      total,
-    }));
+    return Array.from(set);
   }, [expenses]);
+
+  const filtered = useMemo(() => {
+    return expenses.filter((e) => {
+      const matchSearch =
+        e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.expenseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (e.vendor && e.vendor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (e.description && e.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchCat = categoryFilter === 'All' || e.category === categoryFilter;
+      return matchSearch && matchCat;
+    });
+  }, [expenses, searchTerm, categoryFilter]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,191 +97,246 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       return;
     }
 
+    const finalCategory =
+      category === 'CUSTOM' ? customCategory.trim() || 'Other Expenses' : category;
+    const defaultAccount = accounts[0];
+
     const newExp: ExpenseItem = {
       id: `exp-${Date.now()}`,
+      expenseNumber: `EXP-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
       title: title.trim(),
-      category,
+      category: finalCategory,
+      description: description.trim() || undefined,
       amount: amt,
       date,
-      note: note.trim() || undefined,
+      paymentAccountId: defaultAccount?.id || 'acc-1',
+      paymentAccountName: defaultAccount?.name || 'Cash in Hand',
+      paymentMethod: 'Cash',
+      vendor: undefined,
+      createdBy: createdBy.trim() || 'Admin',
+      notes: notes.trim() || undefined,
+      createdAt: new Date().toISOString(),
     };
 
     onAddExpense(newExp);
     setIsModalOpen(false);
     setTitle('');
     setAmount('');
-    setNote('');
+    setDescription('');
+    setVendor('');
+    setNotes('');
     setError('');
   };
 
-  const getCategoryIcon = (catName: string) => {
-    switch (catName) {
-      case 'Packaging':
-        return <Box className="w-4 h-4 text-purple-600" />;
-      case 'Delivery':
-        return <Truck className="w-4 h-4 text-amber-600" />;
-      case 'Product Restock':
-        return <Package className="w-4 h-4 text-blue-600" />;
-      case 'Marketing':
-        return <Megaphone className="w-4 h-4 text-rose-600" />;
-      case 'Rent & Utilities':
-        return <Home className="w-4 h-4 text-indigo-600" />;
-      default:
-        return <Receipt className="w-4 h-4 text-neutral-600" />;
-    }
+  const handleExportCSV = () => {
+    const headers = [
+      'Expense #',
+      'Date',
+      'Category',
+      'Title',
+      'Amount (৳)',
+      'Payment Account',
+      'Method',
+      'Vendor',
+      'Created By',
+    ];
+    const rows = expenses.map((e) => [
+      e.expenseNumber,
+      formatDate(e.date),
+      `"${e.category}"`,
+      `"${e.title.replace(/"/g, '""')}"`,
+      e.amount,
+      `"${e.paymentAccountName}"`,
+      e.paymentMethod,
+      `"${e.vendor || ''}"`,
+      `"${e.createdBy}"`,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `expenses_${getTodayString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Expenses</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight">
+            Business Expense Management
+          </h1>
           <p className="text-xs text-neutral-500 mt-0.5">
-            ব্যবসার নিয়মিত খরচসমূহ (ওভারহেড ও পরিচালন ব্যয়)
+            Operational overhead, payroll, utilities & rent ledger (No double counting of inventory purchases)
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Expense</span>
-        </button>
-      </div>
-
-      {/* 3 Overview Cards - Based STRICTLY on logged expenses */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">
-            Total Business Expenses
-          </div>
-          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-900 mt-1 truncate">
-            {formatCurrency(totalExpenses)}
-          </div>
-          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
-            {expenses.length > 0 ? `${expenses.length} entries recorded` : 'কোনো খরচ এন্ট্রি নেই'}
-          </div>
-        </div>
-
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
-          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">
-            This Month's Expenses
-          </div>
-          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
-            {formatCurrency(thisMonthExpenses)}
-          </div>
-          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
-            Current month overheads
-          </div>
-        </div>
-
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs col-span-2 sm:col-span-1">
-          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider truncate">
-            Average / Entry
-          </div>
-          <div className="text-lg sm:text-2xl font-bold font-mono text-neutral-800 mt-1 truncate">
-            {formatCurrency(avgExpensePerEntry)}
-          </div>
-          <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-1 truncate">
-            {expenses.length > 0 ? 'গড় প্রতি খরচ' : 'N/A'}
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-neutral-300 hover:bg-neutral-50 text-neutral-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Record Expense</span>
+          </button>
         </div>
       </div>
 
-      {/* Expense Categories Breakdown - ONLY SHOWN WHEN EXPENSES EXIST */}
-      {expenses.length > 0 && categoryBreakdown.length > 0 && (
-        <div className="bg-white rounded-xl border border-neutral-200 p-4 space-y-3 shadow-2xs">
-          <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-            Expense Categories (খরচের ক্যাটাগরি)
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {categoryBreakdown.map((cat) => (
-              <div
-                key={cat.name}
-                className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center gap-3"
-              >
-                <div className="w-8 h-8 rounded-lg bg-white border border-neutral-200 flex items-center justify-center shrink-0">
-                  {getCategoryIcon(cat.name)}
-                </div>
-                <div>
-                  <div className="text-[11px] text-neutral-500 font-medium">
-                    {cat.name}
-                  </div>
-                  <div className="text-sm font-bold font-mono text-neutral-900">
-                    {formatCurrency(cat.total)}
-                  </div>
-                </div>
-              </div>
+      {/* 4 Summary Cards (2 per row on mobile!) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">
+            Total Recognized Expenses
+          </div>
+          <div className="text-base sm:text-xl font-bold text-neutral-900">
+            {formatCompactCurrency(totalExpenseAmount)}
+          </div>
+          <div className="text-[10px] text-neutral-400 mt-1">{expenses.length} expense entries</div>
+        </div>
+
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">
+            Rent & Salaries
+          </div>
+          <div className="text-base sm:text-xl font-bold text-rose-600">
+            {formatCompactCurrency(
+              expenses
+                .filter((e) => e.category === 'Office Rent' || e.category === 'Salaries')
+                .reduce((s, e) => s + e.amount, 0)
+            )}
+          </div>
+          <div className="text-[10px] text-neutral-400 mt-1">Fixed operational base</div>
+        </div>
+
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">
+            Marketing & Ads
+          </div>
+          <div className="text-base sm:text-xl font-bold text-blue-700">
+            {formatCompactCurrency(
+              expenses
+                .filter((e) => e.category === 'Advertising')
+                .reduce((s, e) => s + e.amount, 0)
+            )}
+          </div>
+          <div className="text-[10px] text-neutral-400 mt-1">Meta & Google campaigns</div>
+        </div>
+
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-neutral-200 shadow-2xs">
+          <div className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">
+            Utilities & Misc
+          </div>
+          <div className="text-base sm:text-xl font-bold text-amber-700">
+            {formatCompactCurrency(
+              expenses
+                .filter(
+                  (e) =>
+                    e.category !== 'Office Rent' &&
+                    e.category !== 'Salaries' &&
+                    e.category !== 'Advertising'
+                )
+                .reduce((s, e) => s + e.amount, 0)
+            )}
+          </div>
+          <div className="text-[10px] text-neutral-400 mt-1">Internet, electricity, consumables</div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white p-3 rounded-xl border border-neutral-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            placeholder="Search expense, vendor, ref..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border border-neutral-200 rounded-lg text-xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="font-semibold text-neutral-600">Category:</span>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-3 py-1.5 border border-neutral-300 rounded-lg text-xs bg-white"
+          >
+            <option value="All">All Categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
-          </div>
+          </select>
         </div>
-      )}
+      </div>
 
-      {/* Logged Business Expenses Table */}
+      {/* Expenses Table */}
       <div className="bg-white rounded-xl border border-neutral-200 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-          <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-            Logged Business Expenses List
-          </h2>
-          <span className="text-xs text-neutral-500 font-mono font-semibold">
-            {expenses.length} entries
-          </span>
-        </div>
-
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left border-collapse min-w-[650px] text-xs">
             <thead>
-              <tr className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Expense Title</th>
-                <th className="py-3 px-3">Category</th>
-                <th className="py-3 px-3">Note</th>
-                <th className="py-3 px-3 text-right">Amount</th>
-                <th className="py-3 px-4 text-right">Action</th>
+              <tr className="bg-neutral-50 text-neutral-500 font-bold uppercase tracking-wider border-b border-neutral-200">
+                <th className="p-3">Expense #</th>
+                <th className="p-3">Date</th>
+                <th className="p-3">Title & Description</th>
+                <th className="p-3">Category</th>
+                <th className="p-3 text-right">Amount (৳)</th>
+                <th className="p-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {expenses.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-neutral-400 space-y-1">
-                    <Receipt className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
-                    <p className="font-semibold text-neutral-600">এখনো কোনো খরচ যুক্ত করা হয়নি</p>
-                    <p className="text-neutral-400">
-                      দোকানের ওভারহেড বা পরিচালন ব্যয় যোগ করতে উপরের "+ Add Expense" বাটনে ক্লিক করুন।
-                    </p>
+                  <td colSpan={6} className="p-8 text-center text-neutral-400">
+                    No expense records found.
                   </td>
                 </tr>
               ) : (
-                expenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-neutral-50/70 transition-colors">
-                    <td className="py-3 px-4 whitespace-nowrap font-mono text-neutral-500">
-                      {exp.date}
+                filtered.map((e) => (
+                  <tr key={e.id} className="hover:bg-neutral-50/80 transition-all">
+                    <td className="p-3 font-mono font-bold text-neutral-900">
+                      #{e.expenseNumber}
                     </td>
-                    <td className="py-3 px-4 font-bold text-neutral-900">
-                      {exp.title}
+                    <td className="p-3 text-neutral-600">{formatDate(e.date)}</td>
+                    <td className="p-3">
+                      <div className="font-bold text-neutral-900">{e.title}</div>
+                      {e.description && (
+                        <div className="text-[10px] text-neutral-400">{e.description}</div>
+                      )}
                     </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded text-[11px] font-medium">
-                        {exp.category}
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-700">
+                        {e.category}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-neutral-500 max-w-[200px] truncate">
-                      {exp.note || '-'}
+                    <td className="p-3 text-right font-bold text-rose-600">
+                      -{formatCurrency(e.amount)}
                     </td>
-                    <td className="py-3 px-3 text-right whitespace-nowrap font-mono font-bold text-rose-700 text-sm">
-                      {formatCurrency(exp.amount)}
-                    </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                    <td className="p-3 text-center">
                       <button
-                        type="button"
-                        onClick={() => onDeleteExpense(exp.id)}
-                        className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg cursor-pointer transition-colors"
+                        onClick={() => {
+                          if (confirm(`Delete expense #${e.expenseNumber}?`)) {
+                            onDeleteExpense(e.id);
+                          }
+                        }}
+                        className="p-1 text-neutral-400 hover:text-rose-600 cursor-pointer"
                         title="Delete Expense"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -278,113 +347,128 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
         </div>
       </div>
 
-      {/* Add Expense Modal */}
+      {/* Record Expense Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
-              <h3 className="font-bold text-neutral-900 text-sm">Add New Expense</h3>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto text-xs">
+            <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-900 text-white">
+              <h3 className="text-sm font-bold">Record Business Operating Expense</h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer"
+                className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-300"
               >
-                <X className="w-5 h-5" />
+                ✕
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} className="p-4 overflow-y-auto space-y-3">
               {error && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+                <div className="p-2 bg-rose-50 text-rose-700 rounded-lg text-xs font-semibold">
                   {error}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  Expense Title <span className="text-rose-500">*</span>
-                </label>
+                <label className="block font-bold text-neutral-700 mb-1">Expense Title *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Courier advance deposit, Packaging boxes, Facebook Ads"
+                  placeholder="e.g. October Studio Rent, Facebook Sponsored Ads"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  autoFocus
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs font-semibold"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">
-                    Category
-                  </label>
+                  <label className="block font-bold text-neutral-700 mb-1">Category *</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs bg-white font-semibold"
                   >
-                    <option value="Packaging">Packaging</option>
-                    <option value="Delivery">Delivery</option>
-                    <option value="Product Restock">Product Restock</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Rent & Utilities">Rent & Utilities</option>
-                    <option value="Other">Other</option>
+                    {DEFAULT_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="CUSTOM">+ Custom Category</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">
-                    Amount (৳) <span className="text-rose-500">*</span>
-                  </label>
+                  <label className="block font-bold text-neutral-700 mb-1">Date *</label>
                   <input
-                    type="number"
+                    type="date"
                     required
-                    min="1"
-                    placeholder="0"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
                   />
                 </div>
               </div>
 
+              {category === 'CUSTOM' && (
+                <div>
+                  <label className="block font-bold text-neutral-700 mb-1">
+                    Custom Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter category name"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  Date
-                </label>
+                <label className="block font-bold text-neutral-700 mb-1">Expense Amount (৳) *</label>
                 <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg focus:outline-none"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  required
+                  placeholder="e.g. 5000"
+                  value={amount}
+                  onChange={(e) =>
+                    setAmount(e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-rose-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  Notes (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Additional details..."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg focus:outline-none"
+                <label className="block font-bold text-neutral-700 mb-1">Description / Notes</label>
+                <textarea
+                  rows={2}
+                  placeholder="Receipt voucher details, invoice number..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+              <div className="p-2.5 bg-blue-50 text-blue-900 rounded-xl text-[11px]">
+                ℹ️ Accounting Rule: General operating expenses are deducted from Gross Profit to arrive
+                at Net Profit. Raw material and inventory purchase costs are classified under Inventory
+                Assets & COGS and are NOT double-counted here.
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 border border-neutral-300 rounded-lg cursor-pointer"
+                  className="px-3 py-2 border border-neutral-200 rounded-xl font-semibold text-neutral-600"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-xl font-bold"
                 >
                   Save Expense
                 </button>

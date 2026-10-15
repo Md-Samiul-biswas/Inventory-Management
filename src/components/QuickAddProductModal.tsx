@@ -40,11 +40,14 @@ export const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
     const newProd: ProductItem = {
       id: `prod-${Date.now()}`,
       name: name.trim(),
+      sku: `SKU-${Date.now().toString().slice(-4)}`,
       category: category.trim() || 'General',
       unitCost: cost,
       suggestedSellingPrice: Number(suggestedPrice) || Math.round(cost * 1.35),
       stock: Number(stock) || 0,
+      reservedStock: 0,
       minStockAlert: 5,
+      isActive: true,
       unit: unit.trim() || 'pcs',
       createdAt: new Date().toISOString().split('T')[0],
     };

@@ -239,7 +239,7 @@ export const PackageModal: React.FC<PackageModalProps> = ({
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
-                Package Items ({items.length})
+                Package Items
               </label>
 
               <div className="flex items-center gap-1.5">

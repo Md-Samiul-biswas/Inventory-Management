@@ -28,9 +28,19 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
   const totalStockCost = useMemo(() => products.reduce((s, p) => s + p.unitCost * p.stock, 0), [products]);
 
   const totalOrders = orders.length;
-  const totalRevenue = useMemo(() => orders.reduce((s, o) => s + o.sellingPrice, 0), [orders]);
-  const totalCost = useMemo(() => orders.reduce((s, o) => s + o.totalCost, 0), [orders]);
-  const totalProfit = useMemo(() => orders.reduce((s, o) => s + o.netProfit, 0), [orders]);
+  const totalRevenue = useMemo(
+    () => orders.reduce((s, o) => s + (o.totalAmount ?? o.sellingPrice ?? 0), 0),
+    [orders]
+  );
+  const totalCost = useMemo(
+    () =>
+      orders.reduce(
+        (s, o) => s + (o.totalCost ?? (o.totalProductCost || 0) + (o.totalDirectCosts || 0)),
+        0
+      ),
+    [orders]
+  );
+  const totalProfit = useMemo(() => orders.reduce((s, o) => s + (o.netProfit || 0), 0), [orders]);
   const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   return (
@@ -182,7 +192,9 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 
               <div className="flex items-center gap-4 text-right">
                 <div>
-                  <div className="text-neutral-400 text-[10px]">বিক্রি: ৳{ord.sellingPrice}</div>
+                  <div className="text-neutral-400 text-[10px]">
+                    বিক্রি: ৳{ord.totalAmount ?? ord.sellingPrice}
+                  </div>
                   <div className="font-bold font-mono-numbers text-emerald-700">
                     লাভ: +{formatCurrency(ord.netProfit)}
                   </div>
